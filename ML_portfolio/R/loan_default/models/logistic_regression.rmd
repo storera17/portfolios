@@ -626,7 +626,7 @@ ________________________________________________________________________________
 
 #### Set Up `trainControl()`
 
-```{r lasso}
+```{r}
 ctrl <- trainControl(method = "cv", 
                      number = 4,
                      summaryFunction = twoClassSummary,
@@ -636,7 +636,7 @@ ctrl <- trainControl(method = "cv",
 
 #### Set Up `tuneGrid()`
 
-```{r lasso}
+```{r}
 lasso_grid_us <- expand.grid(
   alpha = 1,
   lambda = seq(0.001, 0.1, length = 5)
@@ -646,7 +646,7 @@ lasso_grid_us <- expand.grid(
 ### Fit Model
 ____________________________________________________________________________________________________________
 
-```{r lasso}
+```{r}
 set.seed(123)
 
 log_lasso_us <- caret::train(
@@ -659,11 +659,11 @@ log_lasso_us <- caret::train(
   family = "binomial")
 ```
 
-```{r lasso}
+```{r}
 log_lasso_us
 ```
 
-```{r lasso}
+```{r}
 log_lasso_us$bestTune
 ```
 
@@ -672,19 +672,19 @@ ________________________________________________________________________________
 
 #### Predict Probabilities
 
-```{r lasso}
+```{r}
 lasso_prob_us <- predict(
-  model = log_lasso_us,
+  object = log_lasso_us,
   newdata = hold_logit,
   type = "prob"
-)[, "Yes"]
+)
 ```
 
 #### Predict Class
 
-```{r lasso}
-lasso_pred_us <- predict(
-  model = log_lasso_us,
+```{r}
+lasso_class_us <- predict(
+  object = log_lasso_us,
   newdata = hold_logit,
   type = "raw"
 )
@@ -692,29 +692,28 @@ lasso_pred_us <- predict(
 
 #### Tabulate Predictions
 
-```{r lasso}
+```{r}
 lasso_predictions_us <- tibble::tibble(
-  actual = hold_logit$loan_default,
-  predicted = lasso_pred_us,
-  probability_yes = lasso_prob_us
+  actual = factor(hold_logit$loan_default, levels = c("No", "Yes")),
+  predicted = factor(lasso_class_us, levels = c("No", "Yes")),
+  probability_yes = as.numeric(lasso_prob_us[, "Yes"])
 )
 ```
 
 #### Preview Table
 
-```{r lasso}
+```{r}
 head(lasso_predictions_us)
 ```
 
 ### Evaluate
 ____________________________________________________________________________________________________________
 
-```{r lasso}
+```{r}
 lasso_metrics_us <- evaluate_classifier(
-  actual(lasso_predictions_us$actual,
+  actual = lasso_predictions_us$actual,
   predicted = lasso_predictions_us$predicted,
   probability_yes = lasso_predictions_us$probability_yes)
-)
 ```
 
 ### Store & Export
@@ -722,13 +721,13 @@ ________________________________________________________________________________
 
 #### Save Model
 
-```{r lasso}
+```{r}
 saveRDS(log_lasso_us, file.path(project_dir, "log_lasso_undersampled_model.rds"))
 ```
 
 #### Save Results
 
-```{r lasso}
+```{r}
 lasso_results_us <- lasso_metrics_us %>%
   mutate(
     model_type = "Logistic Regression",
