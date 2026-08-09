@@ -184,7 +184,7 @@ gini_tree_prob <- predict(
 gini_tree_class <- predict(
   object = gini_tree,
   newdata = hold,
-  type = "raw"
+  type = "class"
 )
 ```
 
@@ -229,8 +229,8 @@ saveRDS(gini_tree, file.path(project_dir, "gini_tree_model.rds"))
 ```{r}
 gini_tree_results <- gini_tree_metrics %>%
   mutate(
-    model_type = "Decision Tree ",
-    impurity_measure = "Gini Index",
+    model_type = "Pruned Decision Tree ",
+    impurity = "Gini Index",
     sample = "Full"
   )
 
@@ -296,7 +296,7 @@ gini_tree_prob_us <- predict(
 gini_tree_class_us <- predict(
   object = gini_tree_us,
   newdata = hold,
-  type = "raw"
+  type = "class"
 )
 ```
 
@@ -341,13 +341,14 @@ saveRDS(gini_tree_us, file.path(project_dir, "gini_tree_us_model.rds"))
 ```{r}
 gini_tree_results_us <- gini_tree_metrics_us %>%
   mutate(
-    model_type = "Decision Tree ",
+    model_type = "Pruned Decision Tree",
     impurity = "Gini Index",
     sample = "Undersampled"
   )
 
-saveRDS(gini_tree_us_results, file.path(project_dir, "gini_tree__usresults.rds"))
+saveRDS(gini_tree_us_results, file.path(project_dir, "gini_tree_us_results.rds"))
 ```
+
 
 # **Default Tree - Entropy Index Impurity Measure**
 
@@ -410,7 +411,7 @@ entropic_tree_prob <- predict(
 entropic_tree_class <- predict(
   object = entropic_tree,
   newdata = hold,
-  type = "raw"
+  type = "class"
 )
 ```
 
@@ -455,7 +456,7 @@ saveRDS(entropic_tree, file.path(project_dir, "entropy_tree_model.rds"))
 ```{r}
 entropy_tree_results <- entropy_tree_metrics %>%
   mutate(
-    model_type = "Decision Tree ",
+    model_type = "Pruned Decision Tree ",
     impurity = "Entropy Index",
     sample = "Full"
   )
@@ -522,7 +523,7 @@ entropic_tree_prob_us <- predict(
 entropic_tree_class_us <- predict(
   object = entropic_tree_us,
   newdata = hold,
-  type = "raw"
+  type = "class"
 )
 ```
 
@@ -559,7 +560,7 @@ ________________________________________________________________________________
 #### Save Model
 
 ```{r}
-saveRDS(entropic_tree_us, file.path(project_dir, "entropy_tree__usmodel.rds"))
+saveRDS(entropic_tree_us, file.path(project_dir, "entropy_tree_us_model.rds"))
 ```
 
 #### Save Results
@@ -567,10 +568,562 @@ saveRDS(entropic_tree_us, file.path(project_dir, "entropy_tree__usmodel.rds"))
 ```{r}
 entropy_tree_results_us <- entropy_tree_metrics_us %>%
   mutate(
-    model_type = "Decision Tree ",
+    model_type = "Pruned Decision Tree ",
     impurity = "Entropy Index",
-    sample = "undersampled"
+    sample = "Undersampled"
   )
 
 saveRDS(entropy_tree_us_results, file.path(project_dir, "entropy_tree_us_results.rds"))
+```
+
+# **Prune Tree With Cross Validation - Gini Index Impurity Measure**
+
+## *Training Dataset*
+
+### Build Tree
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+cv_gini_ct=rpart(loan_default ~ ., 
+                 data=train, 
+                 method="class",
+                 parms=list(split="gini"),
+                 control=rpart.control(
+                   maxdepth=30,
+                   cp=0.0001977532, 
+                   xval=15))
+```
+
+### Print `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+printcp(cv_gini_ct)
+```
+
+### Plot `cp` Values
+____________________________________________________________________________________________________________
+
+```{r}
+plotcp(cv_gini_ct)
+```
+
+### Extract Best `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+best_cp_gini=cv_gini_ct$cptable[which.min(cv_gini_ct$cptable[,"xerror"]), "CP"]
+```
+
+### Print Best `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+print(best_cp_gini)
+```
+
+### Select Best Prune Tree
+____________________________________________________________________________________________________________
+
+```{r}
+pruned_cv_gini_tree=prune(cv_gini_ct, cp=best_cp_gini)
+```
+
+### Print Best Prune Tree
+____________________________________________________________________________________________________________
+
+```{r}
+rpart.plot(pruned_cv_gini_tree, extra=1, fallen.leaves=FALSE)
+```
+
+### Obtain Variable Importance
+____________________________________________________________________________________________________________
+
+```{r}
+ print(pruned_cv_gini_tree$variable.importance)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+pruned_cv_gini_tree_prob <- predict(
+  object = pruned_cv_gini_tree,
+  newdata = hold,
+  type = "prob"
+)
+```
+
+#### Predict Class
+
+```{r}
+pruned_cv_gini_tree_class <- predict(
+  object = pruned_cv_gini_tree,
+  newdata = hold,
+  type = "class"
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+pruned_cv_gini_tree_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("No", "Yes")),
+  predicted = factor(pruned_cv_gini_tree_class, levels = c("No", "Yes")),
+  probability_yes = as.numeric(pruned_cv_gini_tree_prob[, "Yes"])
+)
+```
+
+#### Preview Table
+
+```{r}
+head(pruned_cv_gini_tree_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+pruned_cv_gini_tree_metrics <- evaluate_classifier(
+  actual = pruned_cv_gini_tree_predictions$actual,
+  predicted = pruned_cv_gini_tree_predictions$predicted,
+  probability_yes = pruned_cv_gini_tree_predictions$probability_yes
+)
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(pruned_cv_gini_tree, file.path(project_dir, "pruned_cv_gini_tree_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+pruned_cv_gini_tree_results_us <- pruned_cv_gini_tree_metrics %>%
+  mutate(
+    model_type = "Cross-Validated Pruned Decision Tree",
+    impurity = "Gini Index",
+    sample = "Full"
+  )
+
+saveRDS(pruned_cv_gini_results, file.path(project_dir, "pruned_cv_gini_results.rds"))
+```
+
+## *Undersampled Training Dataset*
+
+### Build Tree
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+cv_gini_ct_us=rpart(loan_default ~ ., 
+                 data=train_under, 
+                 method="class",
+                 parms=list(split="gini"),
+                 control=rpart.control(
+                   maxdepth=30,
+                   cp=0.0001977532, 
+                   xval=15))
+```
+
+### Print `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+printcp(cv_gini_ct_us)
+```
+
+### Plot `cp` Values
+____________________________________________________________________________________________________________
+
+```{r}
+plotcp(cv_gini_ct_us)
+```
+
+### Extract Best `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+best_cp_gini_us=cv_gini_ct_us$cptable[which.min(cv_gini_ct_us$cptable[,"xerror"]), "CP"]
+```
+
+### Print Best `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+print(best_cp_gini_us)
+```
+
+### Select Best Prune Tree
+____________________________________________________________________________________________________________
+
+```{r}
+pruned_cv_gini_tree_us=prune(cv_gini_ct_us, cp=best_cp_gini_us)
+```
+
+### Print Best Prune Tree
+____________________________________________________________________________________________________________
+
+```{r}
+rpart.plot(pruned_cv_gini_tree_us, extra=1, fallen.leaves=FALSE)
+```
+
+### Obtain Variable Importance
+____________________________________________________________________________________________________________
+
+```{r}
+ print(pruned_cv_gini_tree_us$variable.importance)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+pruned_cv_gini_tree_us_prob <- predict(
+  object = pruned_cv_gini_tree_us,
+  newdata = hold,
+  type = "prob"
+)
+```
+
+#### Predict Class
+
+```{r}
+pruned_cv_gini_tree_us_class <- predict(
+  object = pruned_cv_gini_tree_us,
+  newdata = hold,
+  type = "class"
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+pruned_cv_gini_tree_predictions_us <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("No", "Yes")),
+  predicted = factor(pruned_cv_gini_tree_us_class, levels = c("No", "Yes")),
+  probability_yes = as.numeric(pruned_cv_gini_tree_us_prob[, "Yes"])
+)
+```
+
+#### Preview Table
+
+```{r}
+head(pruned_cv_gini_tree_predictions_us)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+pruned_cv_gini_tree_metrics_us <- evaluate_classifier(
+  actual = pruned_cv_gini_tree_predictions_us$actual,
+  predicted = pruned_cv_gini_tree_predictions_us$predicted,
+  probability_yes = pruned_cv_gini_tree_predictions_us$probability_yes
+)
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(pruned_cv_gini_tree_us, file.path(project_dir, "pruned_cv_gini_tree_us_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+pruned_cv_gini_tree_results_us <- pruned_cv_gini_tree_metrics_us %>%
+  mutate(
+    model_type = "Cross-Validated Pruned Decision Tree",
+    impurity = "Gini Index",
+    sample = "Undersampled"
+  )
+
+saveRDS(pruned_cv_gini_tree_us_results, file.path(project_dir, "pruned_cv_gini_tree_us_results.rds"))
+```
+
+# **Prune Tree With Cross Validation - Entropy Index Impurity Measure**
+
+## *Training Dataset*
+
+### Build Tree
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+cv_entropy_ct=rpart(loan_default ~ ., 
+                 data=train, 
+                 method="class",
+                 parms=list(split="information"),
+                 control=rpart.control(cp=0.0002358743, xval=15)
+                )
+```
+
+### Print `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+printcp(cv_entropy_ct)
+```
+
+### Plot `cp` Values
+____________________________________________________________________________________________________________
+
+```{r}
+plotcp(cv_entropy_ct) # plot the cp results against model size
+```
+
+### Extract Best `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+best_cp_entropy=cv_entropy_ct$cptable[which.min(cv_entropy_ct$cptable[,"xerror"]), "CP"] #pick the tree with the lowest cross validated error
+```
+
+### Print Best `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+print(best_cp_entropy)
+```
+
+### Select Best Prune Tree
+____________________________________________________________________________________________________________
+
+```{r}
+pruned_cv_entropy_tree=prune(cv_entropy_ct, cp=best_cp_entropy)
+```
+
+### Print Best Prune Tree
+____________________________________________________________________________________________________________
+
+```{r}
+rpart.plot(pruned_cv_entropy_tree, extra=1, fallen.leaves=FALSE)
+```
+
+### Obtain Variable Importance
+____________________________________________________________________________________________________________
+
+```{r}
+print(pruned_cv_entropy_tree$variable.importance)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+pruned_cv_entropy_tree_prob <- predict(
+  object = pruned_cv_entropy_tree,
+  newdata = hold,
+  type = "prob"
+)
+```
+
+#### Predict Class
+
+```{r}
+pruned_cv_entropy_tree_class <- predict(
+  object = pruned_cv_entropy_tree,
+  newdata = hold,
+  type = "class"
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+pruned_cv_entropy_tree_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("No", "Yes")),
+  predicted = factor(pruned_cv_entropy_tree_class, levels = c("No", "Yes")),
+  probability_yes = as.numeric(pruned_cv_entropy_tree_prob[, "Yes"])
+)
+```
+
+#### Preview Table
+
+```{r}
+head(pruned_cv_entropy_tree_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+pruned_cv_entropy_tree_metrics <- evaluate_classifier(
+  actual = pruned_cv_entropy_tree_predictions$actual,
+  predicted = pruned_cv_entropy_tree_predictions$predicted,
+  probability_yes = pruned_cv_entropy_tree_predictions$probability_yes
+)
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(pruned_cv_entropy_tree, file.path(project_dir, "pruned_cv_entropy_tree_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+pruned_cv_entropy_tree_results <- pruned_cv_entropy_tree_metrics %>%
+  mutate(
+    model_type = "Cross-Validated Pruned Decision Tree",
+    impurity = "Entropy Index",
+    sample = "Full"
+  )
+
+saveRDS(pruned_cv_entropy_tree_results, file.path(project_dir, "pruned_cv_entropy_tree_results.rds"))
+```
+
+## *Undersampled Training Dataset*
+
+### Build Tree
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+cv_entropy_ct_us=rpart(loan_default ~ ., 
+                 data=train_under, 
+                 method="class",
+                 parms=list(split="information"),
+                 control=rpart.control(cp=0.0002358743, xval=15)
+                )
+```
+
+### Print `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+printcp(cv_entropy_ct_us)
+```
+
+### Plot `cp` Values
+____________________________________________________________________________________________________________
+
+```{r}
+plotcp(cv_entropy_ct_us) # plot the cp results against model size
+```
+
+### Extract Best `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+best_cp_entropy_us=cv_entropy_ct_us$cptable[which.min(cv_entropy_ct_us$cptable[,"xerror"]), "CP"] #pick the tree with the lowest cross validated error
+```
+
+### Print Best `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+print(best_cp_entropy_us)
+```
+
+### Select Best Prune Tree
+____________________________________________________________________________________________________________
+
+```{r}
+pruned_tree_entropy_us=prune(cv_entropy_ct_us, cp=best_cp_entropy_us)
+```
+
+### Print Best Prune Tree
+____________________________________________________________________________________________________________
+
+```{r}
+rpart.plot(pruned_tree_entropy_us, extra=1, fallen.leaves=FALSE)
+```
+
+### Obtain Variable Importance
+____________________________________________________________________________________________________________
+
+```{r}
+print(pruned_cv_entropy_tree_us$variable.importance)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+pruned_cv_entropy_tree_tree_us_prob <- predict(
+  object = pruned_cv_gini_tree_us,
+  newdata = hold,
+  type = "prob"
+)
+```
+
+#### Predict Class
+
+```{r}
+pruned_cv_entropy_tree_us_class <- predict(
+  object =pruned_cv_entropy_tree_tree_us,
+  newdata = hold,
+  type = "class"
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+pruned_cv_entropy_tree_predictions_us <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("No", "Yes")),
+  predicted = factor(pruned_cv_entropy_tree_us_class, levels = c("No", "Yes")),
+  probability_yes = as.numeric(pruned_cv_entropy_tree_us_prob[, "Yes"])
+)
+```
+
+#### Preview Table
+
+```{r}
+head(pruned_cv_entropy_tree_predictions_us)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+pruned_cv_entropy_tree_metrics_us <- evaluate_classifier(
+  actual = pruned_cv_entropy_tree_predictions_us$actual,
+  predicted = pruned_cv_entropy_tree_predictions_us$predicted,
+  probability_yes = pruned_cv_entropy_tree_predictions_us$probability_yes
+)
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(pruned_cv_entropy_tree_us, file.path(project_dir, "pruned_cv_entropy_tree_us_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+pruned_cv_entropy_tree_results_us <- pruned_cv_entropy_tree_metrics_us %>%
+  mutate(
+    model_type = "Cross-Validated Pruned Decision Tree",
+    impurity = "Entropy Index",
+    sample = "Undersampled"
+  )
+
+saveRDS(pruned_cv_entropu_tree_us_results, file.path(project_dir, "pruned_cv_entropy_tree_us_results.rds"))
 ```
