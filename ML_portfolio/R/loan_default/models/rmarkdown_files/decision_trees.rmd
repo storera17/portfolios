@@ -346,7 +346,7 @@ gini_tree_results_us <- gini_tree_metrics_us %>%
     sample = "Undersampled"
   )
 
-saveRDS(gini_tree_us_results, file.path(project_dir, "gini_tree_us_results.rds"))
+saveRDS(gini_tree_results_us, file.path(project_dir, "gini_tree_us_results.rds"))
 ```
 
 
@@ -573,7 +573,7 @@ entropy_tree_results_us <- entropy_tree_metrics_us %>%
     sample = "Undersampled"
   )
 
-saveRDS(entropy_tree_us_results, file.path(project_dir, "entropy_tree_us_results.rds"))
+saveRDS(entropy_tree_results_us, file.path(project_dir, "entropy_tree_us_results.rds"))
 ```
 
 # **Prune Tree With Cross Validation - Gini Index Impurity Measure**
@@ -706,14 +706,14 @@ saveRDS(pruned_cv_gini_tree, file.path(project_dir, "pruned_cv_gini_tree_model.r
 #### Save Results
 
 ```{r}
-pruned_cv_gini_tree_results_us <- pruned_cv_gini_tree_metrics %>%
+pruned_cv_gini_tree_results <- pruned_cv_gini_tree_metrics %>%
   mutate(
     model_type = "Cross-Validated Pruned Decision Tree",
     impurity = "Gini Index",
     sample = "Full"
   )
 
-saveRDS(pruned_cv_gini_results, file.path(project_dir, "pruned_cv_gini_results.rds"))
+saveRDS(pruned_cv_gini_tree_results, file.path(project_dir, "pruned_cv_gini_tree_results.rds"))
 ```
 
 ## *Undersampled Training Dataset*
@@ -851,7 +851,7 @@ pruned_cv_gini_tree_results_us <- pruned_cv_gini_tree_metrics_us %>%
     sample = "Undersampled"
   )
 
-saveRDS(pruned_cv_gini_tree_us_results, file.path(project_dir, "pruned_cv_gini_tree_us_results.rds"))
+saveRDS(pruned_cv_gini_tree_results_us, file.path(project_dir, "pruned_cv_gini_tree_us_results.rds"))
 ```
 
 # **Prune Tree With Cross Validation - Entropy Index Impurity Measure**
@@ -1039,14 +1039,14 @@ print(best_cp_entropy_us)
 ____________________________________________________________________________________________________________
 
 ```{r}
-pruned_tree_entropy_us=prune(cv_entropy_ct_us, cp=best_cp_entropy_us)
+pruned_cv_entropy_tree_us=prune(cv_entropy_ct_us, cp=best_cp_entropy_us)
 ```
 
 ### Print Best Prune Tree
 ____________________________________________________________________________________________________________
 
 ```{r}
-rpart.plot(pruned_tree_entropy_us, extra=1, fallen.leaves=FALSE)
+rpart.plot(pruned_cv_entropy_tree_us, extra=1, fallen.leaves=FALSE)
 ```
 
 ### Obtain Variable Importance
@@ -1062,8 +1062,8 @@ ________________________________________________________________________________
 #### Predict Probabilities
 
 ```{r}
-pruned_cv_entropy_tree_tree_us_prob <- predict(
-  object = pruned_cv_gini_tree_us,
+pruned_cv_entropy_tree_us_prob <- predict(
+  object = pruned_cv_entropy_tree_us,
   newdata = hold,
   type = "prob"
 )
@@ -1073,7 +1073,7 @@ pruned_cv_entropy_tree_tree_us_prob <- predict(
 
 ```{r}
 pruned_cv_entropy_tree_us_class <- predict(
-  object =pruned_cv_entropy_tree_tree_us,
+  object =pruned_cv_entropy_tree_us,
   newdata = hold,
   type = "class"
 )
@@ -1125,5 +1125,6 @@ pruned_cv_entropy_tree_results_us <- pruned_cv_entropy_tree_metrics_us %>%
     sample = "Undersampled"
   )
 
-saveRDS(pruned_cv_entropu_tree_us_results, file.path(project_dir, "pruned_cv_entropy_tree_us_results.rds"))
+saveRDS(pruned_cv_entropy_tree_results_us, file.path(project_dir, "pruned_cv_entropy_tree_us_results.rds"))
 ```
+
