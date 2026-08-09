@@ -462,3 +462,115 @@ entropy_tree_results <- entropy_tree_metrics %>%
 
 saveRDS(entropy_tree_results, file.path(project_dir, "entropy_tree_results.rds"))
 ```
+
+## *Undersampled Training Dataset*
+
+### Build Tree
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+entropic_ct_us = rpart(
+  loan_default ~ .,
+  data = train_under,
+  method = "class",
+  parms=list(split="information"),
+  control=rpart.control(maxdepth=30, 
+                        minbucket=5, 
+                        xval=0,
+                        cp=0.0001977532)
+  )
+```
+
+### Print `cp`
+____________________________________________________________________________________________________________
+
+```{r}
+printcp(entropic_ct_us)
+```
+
+### Prune
+____________________________________________________________________________________________________________
+
+```{r}
+entropic_tree_us=prune(entropic_ct_us, cp=0.0002465959)
+```
+
+### Print Tree
+____________________________________________________________________________________________________________
+
+```{r}
+rpart.plot(entropic_tree_us, extra=1, fallen.leaves=FALSE)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+entropic_tree_prob_us <- predict(
+  object = entropic_tree_us,
+  newdata = hold,
+  type = "prob"
+)
+```
+
+#### Predict Class
+
+```{r}
+entropic_tree_class_us <- predict(
+  object = entropic_tree_us,
+  newdata = hold,
+  type = "raw"
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+entropic_tree_predictions_us <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("No", "Yes")),
+  predicted = factor(entropic_tree_class_us, levels = c("No", "Yes")),
+  probability_yes = as.numeric(entropic_tree_prob_us[, "Yes"])
+)
+```
+
+#### Preview Table
+
+```{r}
+head(entropic_tree_predictions_us)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+entropy_tree_metrics_us <- evaluate_classifier(
+  actual = entropic_tree_predictions_us$actual,
+  predicted = entropic_tree_predictions_us$predicted,
+  probability_yes = entropic_tree_predictions_us$probability_yes
+)
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(entropic_tree_us, file.path(project_dir, "entropy_tree__usmodel.rds"))
+```
+
+#### Save Results
+
+```{r}
+entropy_tree_results_us <- entropy_tree_metrics_us %>%
+  mutate(
+    model_type = "Decision Tree ",
+    impurity = "Entropy Index",
+    sample = "undersampled"
+  )
+
+saveRDS(entropy_tree_us_results, file.path(project_dir, "entropy_tree_us_results.rds"))
+```
