@@ -367,7 +367,7 @@ Ridge regularization fits a logistic regression model with an L2 penalty. Unlike
 
 #### Set Up `trainControl()`
 
-```{r ridge}
+```{r}
 ctrl <- trainControl(method = "cv", 
                      number = 4,
                      summaryFunction = twoClassSummary,
@@ -377,7 +377,7 @@ ctrl <- trainControl(method = "cv",
 
 #### Set Up `tuneGrid()`
 
-```{r ridge}
+```{r}
 ridge_grid <- expand.grid(
   alpha = 0,
   lambda = seq(0.001, 0.1, length = 5)
@@ -387,7 +387,7 @@ ridge_grid <- expand.grid(
 ### Fit Model
 ____________________________________________________________________________________________________________
 
-```{r ridge}
+```{r}
 set.seed(123)
 
 log_ridge <- caret::train(
@@ -401,11 +401,11 @@ log_ridge <- caret::train(
 )
 ```
 
-```{r ridge}
+```{r}
 log_ridge
 ```
 
-```{r ridge}
+```{r}
 log_ridge$bestTune
 ```
 
@@ -414,19 +414,19 @@ ________________________________________________________________________________
 
 #### Predict Probabilities
 
-```{r ridge}
+```{r}
 ridge_prob <- predict(
-  model = log_ridge,
+  object = log_ridge,
   newdata = hold_logit,
   type = "prob"
-)[, "Yes"]
+)
 ```
 
 #### Predict Class
 
-```{r ridge}
-ridge_pred <- predict(
-  model = log_ridge,
+```{r}
+ridge_class <- predict(
+  object = log_ridge,
   newdata = hold_logit,
   type = "raw"
 )
@@ -434,17 +434,17 @@ ridge_pred <- predict(
 
 #### Tabulate Predictions
 
-```{r ridge}
+```{r}
 ridge_predictions <- tibble::tibble(
-  actual = hold_logit$loan_default,
-  predicted = ridge_pred,
-  probability_yes = ridge_prob
+  actual = factor(hold_logit$loan_default, levels = c("No", "Yes")),
+  predicted = factor(ridge_class, levels = c("No", "Yes")),
+  probability_yes = as.numeric(ridge_prob[, "Yes"])
 )
 ```
 
 #### Preview Table
 
-```{r ridge}
+```{r}
 head(ridge_predictions)
 ```
 
@@ -459,18 +459,29 @@ ridge_metrics <- evaluate_classifier(
 )
 ```
 
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+ridge_metrics <- evaluate_classifier(
+  actual = ridge_predictions$actual,
+  predicted = ridge_predictions$predicted,
+  probability_yes = ridge_predictions$probability_yes
+)
+```
+
 ### Store & Export
 ____________________________________________________________________________________________________________
 
 #### Save Model
 
-```{r ridge}
+```{r}
 saveRDS(log_ridge, file.path(project_dir, "log_ridge_model.rds"))
 ```
 
 #### Save Results
 
-```{r ridge}
+```{r}
 ridge_results <- ridge_metrics %>%
   mutate(
     model_type = "Logistic Regression",
@@ -492,7 +503,7 @@ Elastic net combines L1 and L2 regularization. It is useful when predictors are 
 
 #### Set Up `trainControl()`
 
-```{r elastic}
+```{r}
 ctrl <- trainControl(method = "cv", 
                      number = 4,
                      summaryFunction = twoClassSummary,
@@ -502,7 +513,7 @@ ctrl <- trainControl(method = "cv",
 
 #### Set Up `tuneGrid()`
 
-```{r elastic}
+```{r}
 elastic_grid <- expand.grid(
   alpha = seq(0.1, 0.9, length = 5),
   lambda = seq(0.001, 0.1, length = 5)
@@ -512,7 +523,7 @@ elastic_grid <- expand.grid(
 ### Fit Model
 ____________________________________________________________________________________________________________
 
-```{r elastic}
+```{r}
 set.seed(123)
 
 log_elastic <- caret::train(
@@ -526,33 +537,32 @@ log_elastic <- caret::train(
 )
 ```
 
-```{r elastic}
+```{r}
 log_elastic
 ```
 
-```{r elastic}
+```{r}
 log_elastic$bestTune
 ```
 
 ### Predict on Holdout Dataset
 ____________________________________________________________________________________________________________
 
-
 #### Predict Probabilities
 
-```{r elastic}
+```{r}
 elastic_prob <- predict(
-  model = log_elastic,
+  object = log_elastic,
   newdata = hold_logit,
   type = "prob"
-)[, "Yes"]
+)
 ```
 
 #### Predict Class
 
-```{r elastic}
-elastic_pred <- predict(
-  model = log_elastic,
+```{r}
+elastic_class <- predict(
+  object = log_elastic,
   newdata = hold_logit,
   type = "raw"
 )
@@ -560,24 +570,24 @@ elastic_pred <- predict(
 
 #### Tabulate Predictions
 
-```{r elastic}
+```{r}
 elastic_predictions <- tibble::tibble(
-  actual = hold_logit$loan_default,
-  predicted = elastic_pred,
-  probability_yes = elastic_prob
+  actual = factor(hold_logit$loan_default, levels = c("No", "Yes")),
+  predicted = factor(elastic_class, levels = c("No", "Yes")),
+  probability_yes = as.numeric(elastic_prob[, "Yes"])
 )
 ```
 
 #### Preview Table
 
-```{r elastic}
+```{r}
 head(elastic_predictions)
 ```
 
 ### Evaluate
 ____________________________________________________________________________________________________________
 
-```{r elastic}
+```{r}
 elastic_metrics <- evaluate_classifier(
   actual = elastic_predictions$actual,
   predicted = elastic_predictions$predicted,
@@ -590,13 +600,13 @@ ________________________________________________________________________________
 
 #### Save Model
 
-```{r elastic}
+```{r}
 saveRDS(log_elastic, file.path(project_dir, "log_elastic_model.rds"))
 ```
 
 #### Save Results
 
-```{r ridge}
+```{r}
 elastic_results <- elastic_metrics %>%
   mutate(
     model_type = "Logistic Regression",
