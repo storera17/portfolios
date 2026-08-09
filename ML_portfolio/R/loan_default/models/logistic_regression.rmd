@@ -749,7 +749,7 @@ Ridge regularization fits a logistic regression model with an L2 penalty. Unlike
 
 #### Set Up `trainControl()`
 
-```{r ridge}
+```{r}
 ctrl <- trainControl(method = "cv", 
                      number = 4,
                      summaryFunction = twoClassSummary,
@@ -759,7 +759,7 @@ ctrl <- trainControl(method = "cv",
 
 #### Set Up `tuneGrid()`
 
-```{r ridge}
+```{r}
 ridge_grid_us <- expand.grid(
   alpha = 0,
   lambda = seq(0.001, 0.1, length = 5)
@@ -769,7 +769,7 @@ ridge_grid_us <- expand.grid(
 ### Fit Model
 ____________________________________________________________________________________________________________
 
-```{r ridge}
+```{r}
 set.seed(123)
 
 log_ridge_us <- caret::train(
@@ -783,11 +783,11 @@ log_ridge_us <- caret::train(
 )
 ```
 
-```{r ridge}
+```{r}
 log_ridge_us
 ```
 
-```{r ridge}
+```{r}
 log_ridge_us$bestTune
 ```
 
@@ -796,19 +796,19 @@ ________________________________________________________________________________
 
 #### Predict Probabilities
 
-```{r ridge}
+```{r}
 ridge_prob_us <- predict(
-  model = log_ridge_us,
+  object = log_ridge_us,
   newdata = hold_logit,
   type = "prob"
-)[, "Yes"]
+)
 ```
 
 #### Predict Class
 
-```{r ridge}
-ridge_pred_us <- predict(
-  model = log_ridge_us,
+```{r}
+ridge_class_us <- predict(
+  object = log_ridge_us,
   newdata = hold_logit,
   type = "raw"
 )
@@ -816,24 +816,23 @@ ridge_pred_us <- predict(
 
 #### Tabulate Predictions
 
-```{r ridge}
+```{r}
 ridge_predictions_us <- tibble::tibble(
-  actual = hold_logit$loan_default,
-  predicted = ridge_pred_us,
-  probability_yes = ridge_prob_us
-)
+  actual = factor(hold_logit$loan_default, levels = c("No", "Yes")),
+  predicted = factor(ridge_class_us, levels = c("No", "Yes")),
+  probability_yes = as.numeric(ridge_prob_us[, "Yes"]))
 ```
 
 #### Preview Table
 
-```{r ridge}
+```{r}
 head(ridge_predictions_us)
 ```
 
 ### Evaluate
 ____________________________________________________________________________________________________________
 
-```{r ridge}
+```{r}
 ridge_metrics_us <- evaluate_classifier(
   actual = ridge_predictions_us$actual,
   predicted = ridge_predictions_us$predicted,
@@ -846,13 +845,13 @@ ________________________________________________________________________________
 
 #### Save Model
 
-```{r ridge}
+```{r}
 saveRDS(log_ridge_us, file.path(project_dir, "log_ridge_undersampled_model.rds"))
 ```
 
 #### Save Results
 
-```{r ridge}
+```{r}
 ridge_results_us <- ridge_metrics_us %>%
   mutate(
     model_type = "Logistic Regression",
