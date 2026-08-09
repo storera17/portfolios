@@ -123,6 +123,47 @@ skimr::skim(train_under)
 skimr::skim(hold)
 ```
 
+# *Create `evaluate_classifier()`*
+
+```{r}
+evaluate_classifier <- function(actual, predicted, probability_yes, positive_class = "Yes") {
+  actual <- factor(actual, levels = c("Yes", "No"))
+  predicted <- factor(predicted, levels = c("Yes", "No"))
+
+  cm <- caret::confusionMatrix(
+    data = predicted,
+    reference = actual,
+    positive = positive_class
+  )
+
+  roc_obj <- pROC::roc(
+    response = actual,
+    predictor = probability_yes,
+    levels = c("No", "Yes"),
+    direction = "<",
+    quiet = TRUE
+  )
+
+  precision <- cm$byClass["Precision"]
+  recall <- cm$byClass["Sensitivity"]
+  f1 <- ifelse(
+    precision + recall == 0,
+    0,
+    2 * precision * recall / (precision + recall)
+  )
+
+  tibble::tibble(
+    accuracy = as.numeric(cm$overall["Accuracy"]),
+    balanced_accuracy = as.numeric(cm$byClass["Balanced Accuracy"]),
+    precision = as.numeric(precision),
+    sensitivity_recall = as.numeric(recall),
+    specificity = as.numeric(cm$byClass["Specificity"]),
+    f1_score = as.numeric(f1),
+    auc = as.numeric(pROC::auc(roc_obj))
+  )
+}
+```
+
 # **Default Tree - Gini Impurity Measure**
 
 ## *Training Dataset*
