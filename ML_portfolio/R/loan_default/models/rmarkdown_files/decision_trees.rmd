@@ -1,32 +1,72 @@
 ---
-title: "Decision Tree Models For Predicting Loan Default"
+title: "Decision Tree Modeling for Predicting Loan Default"
 author: "storera17"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
-    html_document:
-        code_folding: show
-        df_print: paged
-        number_sections: yes
-        theme: readable
-        toc: yes
-        toc_float: yes
-        code_download:
-    word_document: yes
-        toc: no
+  html_document:
+    code_folding: show
+    df_print: paged
+    number_sections: yes
+    theme: readable
+    toc: yes
+    toc_float: yes
+    code_download: yes
+  word_document:
+    toc: no
+params:
+  response_var: "loan_default"
+  id_var: ["load_id"] #identifier to be dropped
+
 ---
 
 ```{r setup, include=FALSE, message=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE)
-knitr::opts_chunk$set(fig.width=6, fig.height=4)
+knitr::opts_chunk$set(echo=TRUE,message=FALSE,warning=FALSE)
+knitr::opts_chunk$set(fig_width=6,fig_height=4)
 
 if(require(pacman)==0)
-   {install.packages("pacman")}
-pacman::p_load(devtools,caret,cluster,dplyr,fastDummies,leaps,pacman,tidyverse,skimr,fastDummies,GGally,DataExplorer,ggrepel,ggthemes,dslabs,lubridate,janitor,e1071,scales,recipes,magrittr,forcats,tidycensus,zipcodeR,tidygeocoder,tigris,sf, purrr,ROCR,rpart,rpart.plot, doParallel)
+    {install.packages("pacman")}
 
-if (!require(mlba)) {
-  library(devtools)
-  install_github("gedeck/mlba/mlba", force=TRUE)
-}
-pacman::p_load(mlba,tidyverse)
+pacman::p_load(
+    caret,
+    corrplot,
+    cluster,
+    DataExplorer,
+    devtools,
+    doParallel,
+    dplyr,
+    dslabs,
+    e1071,
+    fastDummies,
+    forcats,
+    GGally,
+    ggplot2,
+    ggthemes,
+    ggrepel,
+    janitor,
+    leaps,
+    lubridate,
+    magrittr,
+    mlba,
+    pacman,
+    recipes,
+    rpart,
+    rpart.plot,
+    ROCR,
+    purrr,
+    scales,
+    sf,
+    skimr,
+    tidycensus,
+    tidygeocoder,
+    tidyverse,
+    tigris,
+    zipcodeR
+    # Add more packages as needed here
+)
+
+set.seed(123)
+
+project_dir <- "ML_portfolio/R/loan_default/data"
 ```
 
 # Introduction
