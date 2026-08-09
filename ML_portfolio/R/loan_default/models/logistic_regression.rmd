@@ -339,13 +339,13 @@ ________________________________________________________________________________
 
 #### Save Model
 
-```{r lasso}
+```{r}
 saveRDS(log_lasso, file.path(project_dir, "log_lasso_model.rds"))
 ```
 
 #### Save Results
 
-```{r lasso}
+```{r}
 lasso_results <- lasso_metrics %>%
   mutate(
     model_type = "Logistic Regression",
