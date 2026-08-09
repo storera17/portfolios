@@ -73,19 +73,19 @@ project_dir <- "ML_portfolio/R/loan_default/data"
 
 ## *Training Dataset*
 
-```{r load}
+```{r}
 train <- readRDS("train.rds")
 ```
 
 ## *Undersampled Training Dataset*
 
-```{r load}
+```{r}
 train_under <- readRDS("train_under.rds")
 ```
 
 ## *Holdout Dataset*
 
-```{r load}
+```{r}
 hold <- readRDS("holdout.rds")
 ```
 
@@ -93,36 +93,36 @@ hold <- readRDS("holdout.rds")
 
 ## *Training Dataset*
 
-```{r target}
+```{r}
 train_logit <- train %>%
   mutate(loan_default = factor(loan_default, levels = c("Yes", "No")))
 ```
 
 ## *Undersampled Training Dataset*
 
-```{r target}
+```{r}
 train_under_logit <- train %>%
   mutate(loan_default = factor(loan_default, levels = c("Yes", "No")))
 ```
 
 ## *Holdout Dataset*
 
-```{r target}
+```{r}
 hold_logit <- hold %>%
   mutate(loan_default = factor(loan_default, levels = c("Yes", "No")))
 ```
 
 # **Skim the Data**
 
-```{r skim}
+```{r}
 skimr::skim(train)
 ```
 
-```{r skim}
+```{r}
 skimr::skim(train_under)
 ```
 
-```{r skim}
+```{r}
 skimr::skim(hold)
 ```
 
@@ -196,7 +196,7 @@ The `tuneGrid` arguement utilizes the `expand.grid()` function with two nested `
 ### Create `evaluate_classifier()`
 ___________________________________________________________________________________________________________
 
-```{r params}
+```{r}
 evaluate_classifier <- function(actual, predicted, probability_yes, positive_class = "Yes") {
   actual <- factor(actual, levels = c("Yes", "No"))
   predicted <- factor(predicted, levels = c("Yes", "No"))
@@ -235,7 +235,7 @@ evaluate_classifier <- function(actual, predicted, probability_yes, positive_cla
 }
 ```
 
-## *Logistic Regression Model - Lasso Regularization*
+### *Logistic Regression Model - Lasso Regularization*
 
 ### Determine Parameters
 ____________________________________________________________________________________________________________
@@ -244,7 +244,7 @@ Lasso regularization fits a logistic regression model with an L1 penalty. The L1
 
 #### Set Up `trainControl()`
 
-```{r lasso}
+```{r}
 ctrl <- trainControl(method = "cv", 
                      number = 4,
                      summaryFunction = twoClassSummary,
@@ -254,7 +254,7 @@ ctrl <- trainControl(method = "cv",
 
 #### Set Up `tuneGrid()`
 
-```{r lasso}
+```{r}
 lasso_grid <- expand.grid(
   alpha = 1,
   lambda = seq(0.001, 0.1, length = 5)
@@ -264,12 +264,12 @@ lasso_grid <- expand.grid(
 ### Fit Model
 ____________________________________________________________________________________________________________
 
-```{r lasso}
+```{r}
 set.seed(123)
 
 log_lasso <- caret::train(
   loan_default ~ .,
-  data = train,
+  data = train_logit,
   method = "glmnet",
   trControl = ctrl,
   tuneGrid = lasso_grid,
@@ -277,11 +277,11 @@ log_lasso <- caret::train(
   family = "binomial")
 ```
 
-```{r lasso}
+```{r}
 log_lasso
 ```
 
-```{r lasso}
+```{r}
 log_lasso$bestTune
 ```
 
@@ -290,19 +290,19 @@ ________________________________________________________________________________
 
 #### Predict Probabilities
 
-```{r lasso}
+```{r}
 lasso_prob <- predict(
-  model = log_lasso,
+  object = log_lasso,
   newdata = hold_logit,
   type = "prob"
-)[, "Yes"]
+)
 ```
 
 #### Predict Class
 
-```{r lasso}
-lasso_pred <- predict(
-  model = log_lasso,
+```{r}
+lasso_class <- predict(
+  object = log_lasso,
   newdata = hold_logit,
   type = "raw"
 )
@@ -310,29 +310,28 @@ lasso_pred <- predict(
 
 #### Tabulate Predictions
 
-```{r lasso}
+```{r}
 lasso_predictions <- tibble::tibble(
-  actual = hold_logit$loan_default,
-  predicted = lasso_pred,
-  probability_yes = lasso_prob
+  actual = factor(hold_logit$loan_default, levels = c("No", "Yes")),
+  predicted = factor(lasso_class, levels = c("No", "Yes")),
+  probability_yes = as.numeric(lasso_prob[, "Yes"])
 )
 ```
 
 #### Preview Table
 
-```{r lasso}
+```{r}
 head(lasso_predictions)
 ```
 
 ### Evaluate
 ____________________________________________________________________________________________________________
 
-```{r lasso}
+```{r}
 lasso_metrics <- evaluate_classifier(
-  actual(lasso_predictions$actual,
+  actual = lasso_predictions$actual,
   predicted = lasso_predictions$predicted,
   probability_yes = lasso_predictions$probability_yes)
-)
 ```
 
 ### Store & Export
