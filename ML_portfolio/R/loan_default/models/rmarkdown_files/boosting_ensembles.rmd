@@ -1,6 +1,7 @@
 ---
-title: "XGBoost Ensemble Modeling For Predicting Loan Default"
+title: "Boosting Ensemble Modeling for Predicting Loan Default"
 author: "storera17"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
   html_document:
     code_folding: show
@@ -12,402 +13,1225 @@ output:
     code_download: yes
   word_document:
     toc: no
+params:
+  response_var: "loan_default"
+  id_var: ["load_id"] #identifier to be dropped
+
 ---
 
-```{r setup, include=FALSE,message=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE)
-knitr::opts_chunk$set(fig.width=6, fig.height=4)
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo=TRUE,message=FALSE,warning=FALSE)
+knitr::opts_chunk$set(fig_width=6,fig_height=4)
 
 if(require(pacman)==0)
-   {install.packages("pacman")}
-pacman::p_load(devtools,caret,cluster,dplyr,fastDummies,leaps,pacman,tidyverse,skimr,fastDummies,GGally,DataExplorer,ggrepel,ggthemes,dslabs,lubridate,janitor,e1071,scales,recipes,magrittr,forcats,tidycensus,zipcodeR,tidygeocoder,tigris,sf, purrr,ROCR,rpart,rpart.plot, doParallel)
+    {install.packages("pacman")}
 
-if (!require(mlba)) {
-  library(devtools)
-  install_github("gedeck/mlba/mlba", force=TRUE)
+pacman::p_load(
+    caret,
+    caTools,
+    corrplot,
+    cluster,
+    DataExplorer,
+    devtools,
+    doParallel,
+    dplyr,
+    dslabs,
+    e1071,
+    fastDummies,
+    forcats,
+    GGally,
+    ggplot2,
+    ggthemes,
+    ggrepel,
+    janitor,
+    leaps,
+    lubridate,
+    magrittr,
+    mlba,
+    pacman,
+    ranger,
+    recipes,
+    rpart,
+    rpart.plot,
+    ROCR,
+    purrr,
+    scales,
+    sf,
+    skimr,
+    tidycensus,
+    tidygeocoder,
+    tidyverse,
+    tigris,
+    xgboost,
+    zipcodeR
+    # Add more packages as needed here
+)
+
+set.seed(123)
+
+project_dir <- "ML_portfolio/R/loan_default/data"
+```
+
+# **Introduction**
+
+Boosting is a tree-based ensemble method designed to improve predictive performance by combining multiple weak learners. In most classification applications, these weak learners are shallow decision trees that provide limited predictive accuracy individually but become substantially more powerful when combined. Unlike random forests, which train many trees independently and aggregate their predictions through majority voting or probability averaging, boosting trains trees sequentially. Each new tree is constructed to improve on the errors made by the previous trees, allowing the model to focus progressively on observations that are more difficult to classify.
+
+The boosting process begins with an initial weak model fit to the training data. Observations that are incorrectly classified or poorly predicted are given greater emphasis in subsequent iterations. As additional trees are added, each model attempts to correct the remaining error from the existing ensemble. The final prediction is based on the combined contribution of all trees, where trees that reduce prediction error more effectively have greater influence on the final classification. This sequential learning process can improve model accuracy, but it also requires careful tuning because boosted models may overfit if too many trees are added or if individual trees are too complex.
+
+Boosting differs from random forests in both construction and modeling objective. Random forests reduce prediction variance by averaging many independently grown trees, whereas boosting sequentially reduces error by emphasizing difficult cases. Random forest trees are often grown deeply and decorrelated through bootstrap sampling and random feature selection. Boosted trees are typically shallower and are added one at a time, with each tree contributing an incremental improvement. Consequently, boosting can provide strong predictive performance but may be slower to train and more sensitive to hyperparameter choices than random forests.
+
+Several boosting algorithms are available for classification problems. AdaBoost increases the weight of misclassified observations so that subsequent weak learners focus more heavily on those cases. Gradient boosting methods, including GBM, XGBoost, LightGBM, and CatBoost, improve the model by fitting new trees to the gradient of the loss function. LogitBoost is another classification-focused boosting method that updates predictions using a log-odds formulation. In this project, gradient boosting was evaluated using the `xgboost` package in R because it provides an efficient and flexible implementation of boosted decision trees.
+
+The performance of XGBoost depends on several tuning parameters. The number of boosting rounds, `nrounds`, controls how many trees are added to the ensemble. The `max_depth` parameter controls the complexity of each tree, while `eta` determines the learning rate, or the size of each boosting update. Smaller learning rates often require more boosting rounds but can improve generalization. The `gamma` parameter specifies the minimum loss reduction required to create a split. The `subsample` and `colsample_bytree` parameters introduce randomness by sampling rows and predictors during training, which can reduce overfitting. Finally, `min_child_weight` controls the minimum amount of information required in a child node and can prevent overly specific splits.
+
+In this project, boosted tree models were evaluated for binary classification of loan default. Because loan default is an imbalanced classification problem, XGBoost was used to estimate the probability that a borrower would default, and model performance was assessed using F1 score as the primary metric. Additional metrics, including accuracy, precision, recall, balanced accuracy, and area under the receiver operating characteristic curve, were used to compare boosted models with decision trees, random forests, logistic regression models, and neural networks.
+
+# **Read in the Data**
+
+## *Training Dataset*
+
+```{r}
+train <- readRDS("train.rds")
+```
+
+## *Undersampled Training Dataset*
+
+```{r}
+train_under <- readRDS("train_under.rds")
+```
+
+## *Holdout Dataset*
+
+```{r}
+hold <- readRDS("holdout.rds")
+```
+
+# **Preview the Data**
+
+## *Training Dataset*
+
+```{r}
+skimr::skim(train)
+```
+
+## *Undersampled Training Dataset*
+
+```{r}
+skimr::skim(train_under)
+```
+
+## *Holdout Dataset*
+
+```{r}
+skimr::skim(hold)
+```
+
+# **Create `evaluate_classifier()`**
+
+```{r}
+evaluate_classifier <- function(actual, predicted, probability_yes, positive_class = "Yes") {
+  actual <- factor(actual, levels = c("Yes", "No"))
+  predicted <- factor(predicted, levels = c("Yes", "No"))
+
+  cm <- caret::confusionMatrix(
+    data = predicted,
+    reference = actual,
+    positive = positive_class
+  )
+
+  roc_obj <- pROC::roc(
+    response = actual,
+    predictor = probability_yes,
+    levels = c("No", "Yes"),
+    direction = "<",
+    quiet = TRUE
+  )
+
+  precision <- cm$byClass["Precision"]
+  recall <- cm$byClass["Sensitivity"]
+  f1 <- ifelse(
+    precision + recall == 0,
+    0,
+    2 * precision * recall / (precision + recall)
+  )
+
+  tibble::tibble(
+    accuracy = as.numeric(cm$overall["Accuracy"]),
+    balanced_accuracy = as.numeric(cm$byClass["Balanced Accuracy"]),
+    precision = as.numeric(precision),
+    sensitivity_recall = as.numeric(recall),
+    specificity = as.numeric(cm$byClass["Specificity"]),
+    f1_score = as.numeric(f1),
+    auc = as.numeric(pROC::auc(roc_obj))
+  )
 }
-pacman::p_load(mlba,tidyverse)
 ```
 
-**Background**
-*Boosting*
-*Another ensemble decision tree is to use a boosted algorithm. Boosting is a machine learning technique that improves prediction accuracy by training multiple weak models (usually decision trees) sequentially, where each tree learns from the mistakes of the previous one. Unlike Random Forests (which train many independent trees and average their outputs), Boosting builds trees one at a time, with each new tree focusing on correcting the errors of the previous ones.
-*Learning from Mistakes, the Boosted Way*
-- Train a weak model (First Decision Tree)
-  - Start with a training a small decision tree on the dataset
-  - Some predictions will be incorrect 
-- Increase focus on mistakes
-  - Increase weight of misclassified points (make them more important)
-  - Next tree pays extra attention to mistakes
-- Build many trees
-  - Repeat 
-  - Consecutive trees correct each other
-- Final prediction = a combination of all trees' predictions, adjusted based on their contribution to reducing errors
-  - Higher contributing trees reduce errors and greater influence oin final prediction
-  - Lower contributing trees have smaller impact, which ensures the ensemble is not dominated by any single tree's mistake
-  
-*Comparing Random Forest and Boosting Ensembles*
+# **Shallow XGBoost Models**
 
-| **Feature** | **Random Forest** | **Boosting** | 
-|-------------|-------------------|--------------|
-|Construction | Independtly       | Sequentially | 
-| Focus       | Majority voting (avg) | Mistake correcting
-| Tree Depth  | Full trees        | Shallow trees| 
-| Performancxe| Generalization.   | More accurate (slower) | 
-| Overfit Risk | Low.             | High        | 
+## *Training Dataset*
 
-
-# Load and Survey Data
-**Loading in Data**
-*The 'train.csv' file was loaded in with the code below, this was named df_raw because it is 'raw' unstructured data. The argument stringAsFactors = TRUE converts character variables into factors. 
-```{r}
-train <- readRDS("3B_Palmer-Storer_train_raw.rds")
-hold <- readRDS("3B_Palmer-Storer_holdout_raw.rds")
-# train_clean <- readRDS("3B_Palmer-Storer_train_raw.rds")
-# hold_clean <- readRDS("3B_Palmer-Storer_holdout_raw.rds")
-# # train1 <- readRDS("train_clean_1.rds")
-# hold1 <- readRDS("hold_clean_1.rds")
-```
-
-**Boostig Algorithms**
-There are several boosting algorithms including:
-
-* AdaBoost: Adjusts sample weights so that misclassified instances get more attention.
-* Gradient Boosting (GBM, XGBoost, LightGBM, CatBoost): Uses gradient-based updates to correct previous errors.
-* LogitBoost: Adjusts predictions based on the log-odds transformation in classification tasks.
-
-We will consider **Gradient Boosting**. The `xgboost` package in R is a popular implementation of this algorithm.
-
-**Key XGBoost Parameters to Tune**
-
-| Parameter          | Description                                           | Example Values to Try    |
-|-------------------|---------------------------------------------------|----------------------|
-| **nrounds**       | Number of boosting rounds (trees)                 | 50, 100, 200, 500   |
-| **max_depth**     | Maximum depth of each tree                        | 3, 5, 7, 10         |
-| **eta**          | Learning rate (step size shrinkage)               | 0.01, 0.1, 0.3      |
-| **gamma**        | Minimum loss reduction required for a split       | 0, 0.1, 0.5, 1      |
-| **colsample_bytree** | Fraction of features to randomly sample per tree | 0.5, 0.7, 1.0       |
-| **min_child_weight** | Minimum sum of instance weights needed in a child node | 1, 3, 5            |
-| **subsample**    | Fraction of training data used per boosting round | 0.5, 0.7, 1.0       |
-
-**Core Detection**
-```{r}
-cores=parallel::detectCores()
-cores
-```
-**Fitting the Model**
-```{r}
-#STEP 1: Set Up Parallel Processing
-cl <- parallel::makeCluster(cores)  # Set CPU cores for parallel execution
-registerDoParallel(cl)  # Register parallel backend
-
-#STEP 2: Set Up 5-Fold Cross-Validation
-cv_control <- trainControl(
-  method = "cv",
-  number = 5,
-  allowParallel = TRUE  # Enables parallel computation during training
-)
-
-#STEP 3: Train XGBoost Model Using tuneLength (Automatic Hyperparameter Search)
-xgb <- train(
-  loan_default ~ ., 
-  data = train,
-  method = "xgbTree",
-  trControl = cv_control,  # Apply 5-fold cross-validation
-  tuneLength = 5  # caret picks up to 5 values for each of 7 parms and fits all combos up to 5^7
-)
-
-# Step 4: Stop Parallel Processing ----
-stopCluster(cl)  # Shut down parallel cluster
-registerDoSEQ()  # Reset to sequential processing
-
-saveRDS(xgb, "xgboost.rds")
-```
+### Set Parameters
+____________________________________________________________________________________________________________
 
 ```{r}
-#STEP 1: Set Up Parallel Processing
-cl <- parallel::makeCluster(10)  # Set CPU cores for parallel execution
-registerDoParallel(cl)  # Register parallel backend
-
-#STEP 2: Set Up 5-Fold Cross-Validation
-cv_control <- trainControl(
-  method = "cv",
-  number = 5,
-  allowParallel = TRUE  # Enables parallel computation during training
+xgb_shallow_params <- list(
+  objective = "binary:logistic",
+  eval_metric = "aucpr",
+  max_depth = 3,
+  eta = 0.08,
+  subsample = 0.8,
+  colsample_bytree = 0.8,
+  min_child_weight = 3
 )
 
-# STEP 3: Train AdaBoost Model
-# Note: This method uses the 'adabag' package
-ada <- train(
-  loan_default ~ ., 
-  data = train,
-  method = "AdaBoost.M1", # <-- Change the method here
-  trControl = cv_control, 
-  tuneLength = 5
-)
-
-# Step 4: Stop Parallel Processing ----
-stopCluster(cl)  # Shut down parallel cluster
-registerDoSEQ()  # Reset to sequential processing
-
-saveRDS(ada, "adab.rds")
+xgb_shallow_nrounds <- 120
+xgb_shallow_threshold <- 0.62
 ```
 
-```{r}
-#STEP 1: Set Up Parallel Processing
-cl <- parallel::makeCluster(10)  # Set CPU cores for parallel execution
-registerDoParallel(cl)  # Register parallel backend
-
-#STEP 2: Set Up 5-Fold Cross-Validation
-cv_control <- trainControl(
-  method = "cv",
-  number = 5,
-  allowParallel = TRUE  # Enables parallel computation during training
-)
-
-# STEP 3: Train LogitBoost Model
-# Note: This method uses the 'caTools' package
-log <- train(
-  loan_default ~ ., 
-  data = train,
-  method = "LogitBoost", # <-- Change the method here
-  trControl = cv_control, 
-  tuneLength = 5
-)
-
-# Step 4: Stop Parallel Processing ----
-stopCluster(cl)  # Shut down parallel cluster
-registerDoSEQ()  # Reset to sequential processing
-
-saveRDS(log, "logb.rds")
-```
+### Build Boosted Ensemble
+____________________________________________________________________________________________________________
 
 ```{r}
 set.seed(123)
-maj <- train %>% dplyr::filter(loan_default == "No")
-min <- train %>% dplyr::filter(loan_default == "Yes")
-maj_under <- maj %>% dplyr::sample_n(nrow(min))
-train_us <- dplyr::bind_rows(min, maj_under) %>% dplyr::slice_sample(prop = 1)
-prop.table(table(train_us$loan_default))
 
-# cmaj <- train_clean %>% dplyr::filter(loan_default == "No")
-# cmin <- train_clean %>% dplyr::filter(loan_default == "Yes")
-# cmaj_under <- cmaj %>% dplyr::sample_n(nrow(cmin))
-# ctrain_us <- dplyr::bind_rows(cmin, cmaj_under) %>% dplyr::slice_sample(prop = 1)
-# prop.table(table(ctrain_us$loan_default))
-
-# maj1 <- train1 %>% dplyr::filter(loan_default == "No")
-# min1 <- train1 %>% dplyr::filter(loan_default == "Yes")
-# maj_under1 <- maj1 %>% dplyr::sample_n(nrow(min1))
-# train_us1 <- dplyr::bind_rows(min1, maj_under1) %>% dplyr::slice_sample(prop = 1)
-# prop.table(table(train_us1$loan_default))
-```
-
-```{r}
-#STEP 1: Set Up Parallel Processing
-cl <- parallel::makeCluster(10)  # Set CPU cores for parallel execution
-registerDoParallel(cl)  # Register parallel backend
-
-#STEP 2: Set Up 5-Fold Cross-Validation
-cv_control <- trainControl(
-  method = "cv",
-  number = 5,
-  allowParallel = TRUE  # Enables parallel computation during training
-)
-
-#STEP 3: Train XGBoost Model Using tuneLength (Automatic Hyperparameter Search)
-xgb_us <- train(
-  loan_default ~ ., 
-  data = train_us,
-  method = "xgbTree",
-  trControl = cv_control,  # Apply 5-fold cross-validation
-  tuneLength = 5  # caret picks up to 5 values for each of 7 parms and fits all combos up to 5^7
-)
-
-# Step 4: Stop Parallel Processing ----
-stopCluster(cl)  # Shut down parallel cluster
-registerDoSEQ()  # Reset to sequential processing
-
-saveRDS(xgb_us, "xgb_us.rds")
-```
-
-```{r}
-#STEP 1: Set Up Parallel Processing
-cl <- parallel::makeCluster(10)  # Set CPU cores for parallel execution
-registerDoParallel(cl)  # Register parallel backend
-
-#STEP 2: Set Up 5-Fold Cross-Validation
-cv_control <- trainControl(
-  method = "cv",
-  number = 5,
-  allowParallel = TRUE  # Enables parallel computation during training
-)
-
-# STEP 3: Train AdaBoost Model
-# Note: This method uses the 'adabag' package
-ada_us <- train(
-  loan_default ~ ., 
-  data = train_us,
-  method = "AdaBoost.M1", # <-- Change the method here
-  trControl = cv_control, 
-  tuneLength = 5
-)
-
-# Step 4: Stop Parallel Processing ----
-stopCluster(cl)  # Shut down parallel cluster
-registerDoSEQ()  # Reset to sequential processing
-
-saveRDS(ada_us, "adab_us.rds")
-```
-
-```{r}
-#STEP 1: Set Up Parallel Processing
-cl <- parallel::makeCluster(10)  # Set CPU cores for parallel execution
-registerDoParallel(cl)  # Register parallel backend
-
-#STEP 2: Set Up 5-Fold Cross-Validation
-cv_control <- trainControl(
-  method = "cv",
-  number = 5,
-  allowParallel = TRUE  # Enables parallel computation during training
-)
-
-# STEP 3: Train LogitBoost Model
-# Note: This method uses the 'caTools' package
-log_us <- train(
-  loan_default ~ ., 
-  data = train,
-  method = "LogitBoost", # <-- Change the method here
-  trControl = cv_control, 
-  tuneLength = 5
-)
-
-# Step 4: Stop Parallel Processing ----
-stopCluster(cl)  # Shut down parallel cluster
-registerDoSEQ()  # Reset to sequential processing
-
-saveRDS(log_us, "logb_us.rds")
-```
-
-**Evaluatig the Results**
-*View Output*
-```{r}
-#print(xgb_model)  #  To Display all tuning combinations
-print(xgb$bestTune)  # Display the best tuning combination
-```
-
-```{r}
-#print(xgb_model)  #  To Display all tuning combinations
-print(ada$bestTune)  # Display the best tuning combination
-```
-
-```{r}
-#print(xgb_model)  #  To Display all tuning combinations
-print(log$bestTune)  # Display the best tuning combination
-```
-
-```{r}
-#print(xgb_model)  #  To Display all tuning combinations
-print(xgb_us$bestTune)  # Display the best tuning combination
-```
-
-```{r}
-#print(xgb_model)  #  To Display all tuning combinations
-print(ada_us$bestTune)  # Display the best tuning combination
-```
-
-```{r}
-#print(xgb_model)  #  To Display all tuning combinations
-print(log_us$bestTune)  # Display the best tuning combination
-```
-*Make predictions*
-```{r}
-boost.preds <- data.frame(
-  loan_default = hold$loan_default,
-  im.xgb.class = predict(xgb, 
-                                 newdata = hold,
-                                 type="raw"),
-  im.xgb.prob = predict(xgb, 
-                                 newdata = hold, 
-                                 type="prob")[,"Yes"],
-  im.ada.class = predict(ada, 
-                                 newdata = hold,
-                                 type="raw"),
-  im.ada.prob = predict(ada, 
-                                 newdata = hold, 
-                                 type="prob")[,"Yes"],
-  im.log.class = predict(log, 
-                                 newdata = hold,
-                                 type="raw"),
-  im.log.prob = predict(log, 
-                                 newdata = hold, 
-                                 type="prob")[,"Yes"],
-  bal.xgb.class = predict(xgb_us, 
-                                 newdata = hold,
-                                 type="raw"),
-  bal.xgb.prob = predict(xgb_us, 
-                                 newdata = hold, 
-                                 type="prob")[,"Yes"],
-  bal.ada.class = predict(ada_us, 
-                                 newdata = hold,
-                                 type="raw"),
-  bal.ada.prob = predict(ada_us, 
-                                 newdata = hold, 
-                                 type="prob")[,"Yes"],
-  bal.log.class = predict(log_us, 
-                                 newdata = hold,
-                                 type="raw"),
-  bal.log.prob = predict(log_usz, 
-                                 newdata = hold, 
-                                 type="prob")[,"Yes"]
+xgb_shallow <- xgboost::xgboost(
+  data = data.matrix(train %>% select(-loan_default)),
+  label = ifelse(train$loan_default == "Yes", 1, 0),
+  params = xgb_shallow_params,
+  nrounds = xgb_shallow_nrounds,
+  verbose = 0
 )
 ```
 
-**Comparing Models**
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
 ```{r}
-# Extract true labels
-truth <- boost.preds$loan_default
+xgb_shallow_prob <- predict(
+  object = xgb_shallow,
+  newdata = data.matrix(hold %>% select(-loan_default))
+)
+```
 
-# Get model names based on .prob columns
-model_names <- names(pred.holdout) %>%
-  stringr::str_subset("\\.prob$") %>%
-  stringr::str_remove("\\.prob$")
+#### Predict Class
 
-# Function to compute metrics for each model
-get_metrics <- function(model_name) {
-  prob_col <- paste0(model_name, ".prob")
-  class_col <- paste0(model_name, ".class")
+```{r}
+xgb_shallow_class <- factor(
+  ifelse(xgb_shallow_prob >= xgb_shallow_threshold, "Yes", "No"),
+  levels = c("Yes", "No")
+)
+```
 
-  # Extract predictions
-  prob <- pred.holdout[[prob_col]]
-  pred <- factor(pred.holdout[[class_col]], levels = c("No", "Yes"))
+#### Tabulate Predictions
 
-  # Confusion matrix
-  cm <- caret::confusionMatrix(pred, truth, positive = "Yes")
+```{r}
+xgb_shallow_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("Yes", "No")),
+  predicted = xgb_shallow_class,
+  probability_yes = as.numeric(xgb_shallow_prob)
+)
+```
 
-  # AUC
-  roc_obj <- pROC::roc(truth, prob, quiet = TRUE)
+#### Preview Table
 
-  # Metrics
-  data.frame(
-    Model = model_name,
-    Accuracy = cm$overall["Accuracy"],
-    Sensitivity = cm$byClass["Sensitivity"],
-    Specificity = cm$byClass["Specificity"],
-    F1 = MLmetrics::F1_Score(
-      y_pred = pred,
-      y_true = truth,
-      positive = "Yes"
-    ),
-    AUC = as.numeric(roc_obj$auc)
+```{r}
+head(xgb_shallow_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+xgb_shallow_metrics <- evaluate_classifier(
+  actual = xgb_shallow_predictions$actual,
+  predicted = xgb_shallow_predictions$predicted,
+  probability_yes = xgb_shallow_predictions$probability_yes
+)
+
+xgb_shallow_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(xgb_shallow, file.path(project_dir, "xgb_shallow_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+xgb_shallow_results <- xgb_shallow_metrics %>%
+  mutate(
+    model_type = "Boosted Tree Ensemble",
+    package = "xgboost",
+    model_variant = "xgb_shallow",
+    sample = "Full",
+    threshold = xgb_shallow_threshold,
+    nrounds = xgb_shallow_nrounds,
+    max_depth = xgb_shallow_params$max_depth,
+    eta = xgb_shallow_params$eta,
+    subsample = xgb_shallow_params$subsample,
+    colsample_bytree = xgb_shallow_params$colsample_bytree,
+    min_child_weight = xgb_shallow_params$min_child_weight
   )
-}
 
-# Apply to all models
-results_df <- dplyr::bind_rows(lapply(model_names, get_metrics))
-
-# Remove row names and display
-rownames(results_df) <- NULL
-print(results_df)
+saveRDS(xgb_shallow_results, file.path(project_dir, "xgb_shallow_results.rds"))
 ```
 
+## *Undersampled Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+xgb_shallow_us_threshold <- 0.64
+```
+
+### Build Boosted Ensemble
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+
+xgb_shallow_us <- xgboost::xgboost(
+  data = data.matrix(train_under %>% select(-loan_default)),
+  label = ifelse(train_under$loan_default == "Yes", 1, 0),
+  params = xgb_shallow_params,
+  nrounds = xgb_shallow_nrounds,
+  verbose = 0
+)
+```
+
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+xgb_shallow_us_prob <- predict(xgb_shallow_us, newdata = data.matrix(hold %>% select(-loan_default)))
+```
+
+#### Predict Class
+
+```{r}
+xgb_shallow_us_class <- factor(
+  ifelse(xgb_shallow_us_prob >= xgb_shallow_us_threshold, "Yes", "No"),
+  levels = c("Yes", "No")
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+xgb_shallow_us_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("Yes", "No")),
+  predicted = xgb_shallow_us_class,
+  probability_yes = as.numeric(xgb_shallow_us_prob)
+)
+```
+
+#### Preview Table
+
+```{r}
+head(xgb_shallow_us_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+xgb_shallow_us_metrics <- evaluate_classifier(
+  actual = xgb_shallow_us_predictions$actual,
+  predicted = xgb_shallow_us_predictions$predicted,
+  probability_yes = xgb_shallow_us_predictions$probability_yes
+)
+
+xgb_shallow_us_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(xgb_shallow_us, file.path(project_dir, "xgb_shallow_us_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+
+xgb_shallow_us_results <- xgb_shallow_us_metrics %>%
+  mutate(
+    model_type = "Boosted Tree Ensemble",
+    package = "xgboost",
+    model_variant = "xgb_shallow",
+    sample = "Undersampled",
+    threshold = xgb_shallow_us_threshold,
+    nrounds = xgb_shallow_nrounds,
+    max_depth = xgb_shallow_params$max_depth,
+    eta = xgb_shallow_params$eta,
+    subsample = xgb_shallow_params$subsample,
+    colsample_bytree = xgb_shallow_params$colsample_bytree,
+    min_child_weight = xgb_shallow_params$min_child_weight
+  )
+
+saveRDS(xgb_shallow_us_results, file.path(project_dir, "xgb_shallow_us_results.rds"))
+```
+
+# **Medium XGBoost Models**
+
+## *Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+xgb_medium_params <- list(
+  objective = "binary:logistic",
+  eval_metric = "aucpr",
+  max_depth = 5,
+  eta = 0.05,
+  subsample = 0.8,
+  colsample_bytree = 0.8,
+  min_child_weight = 3
+)
+
+xgb_medium_nrounds <- 180
+xgb_medium_threshold <- 0.65
+```
+
+### Build Boosted Ensemble
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+
+xgb_medium <- xgboost::xgboost(
+  data = data.matrix(train %>% select(-loan_default)),
+  label = ifelse(train$loan_default == "Yes", 1, 0),
+  params = xgb_medium_params,
+  nrounds = xgb_medium_nrounds,
+  verbose = 0
+)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+xgb_medium_prob <- predict(
+  object = xgb_medium,
+  newdata = data.matrix(hold %>% select(-loan_default))
+)
+```
+
+#### Predict Class
+
+```{r}
+xgb_medium_class <- factor(
+  ifelse(xgb_medium_prob >= xgb_medium_threshold, "Yes", "No"),
+  levels = c("Yes", "No")
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+xgb_medium_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("Yes", "No")),
+  predicted = xgb_medium_class,
+  probability_yes = as.numeric(xgb_medium_prob)
+)
+```
+
+#### Preview Table
+
+```{r}
+head(xgb_medium_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+xgb_medium_metrics <- evaluate_classifier(
+  actual = xgb_medium_predictions$actual,
+  predicted = xgb_medium_predictions$predicted,
+  probability_yes = xgb_medium_predictions$probability_yes
+)
+
+xgb_medium_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(xgb_medium, file.path(project_dir, "xgb_medium_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+xgb_medium_results <- xgb_medium_metrics %>%
+  mutate(
+    model_type = "Boosted Tree Ensemble",
+    package = "xgboost",
+    model_variant = "xgb_medium",
+    sample = "Full",
+    threshold = xgb_medium_threshold,
+    nrounds = xgb_medium_nrounds,
+    max_depth = xgb_medium_params$max_depth,
+    eta = xgb_medium_params$eta,
+    subsample = xgb_medium_params$subsample,
+    colsample_bytree = xgb_medium_params$colsample_bytree,
+    min_child_weight = xgb_medium_params$min_child_weight
+  )
+
+saveRDS(xgb_medium_results, file.path(project_dir, "xgb_medium_results.rds"))
+```
+
+## *Undersampled Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+xgb_medium_us_threshold <- 0.66
+```
+
+### Build Boosted Ensemble
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+
+xgb_medium_us <- xgboost::xgboost(
+  data = data.matrix(train_under %>% select(-loan_default)),
+  label = ifelse(train_under$loan_default == "Yes", 1, 0),
+  params = xgb_medium_params,
+  nrounds = xgb_medium_nrounds,
+  verbose = 0
+)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+xgb_medium_us_prob <- predict(
+  object = xgb_medium_us,
+  newdata = data.matrix(hold %>% select(-loan_default))
+)
+```
+
+#### Predict Class
+
+```{r}
+xgb_medium_us_class <- factor(
+  ifelse(xgb_medium_us_prob >= xgb_medium_us_threshold, "Yes", "No"),
+  levels = c("Yes", "No")
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+xgb_medium_us_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("Yes", "No")),
+  predicted = xgb_medium_us_class,
+  probability_yes = as.numeric(xgb_medium_us_prob)
+)
+```
+
+#### Preview Table
+
+```{r}
+head(xgb_medium_us_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+xgb_medium_us_metrics <- evaluate_classifier(
+  actual = xgb_medium_us_predictions$actual,
+  predicted = xgb_medium_us_predictions$predicted,
+  probability_yes = xgb_medium_us_predictions$probability_yes
+)
+
+xgb_medium_us_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(xgb_medium_us, file.path(project_dir, "xgb_medium_us_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+xgb_medium_us_results <- xgb_medium_us_metrics %>%
+  mutate(
+    model_type = "Boosted Tree Ensemble",
+    package = "xgboost",
+    model_variant = "xgb_medium",
+    sample = "Undersampled",
+    threshold = xgb_medium_us_threshold,
+    nrounds = xgb_medium_nrounds,
+    max_depth = xgb_medium_params$max_depth,
+    eta = xgb_medium_params$eta,
+    subsample = xgb_medium_params$subsample,
+    colsample_bytree = xgb_medium_params$colsample_bytree,
+    min_child_weight = xgb_medium_params$min_child_weight
+  )
+
+saveRDS(xgb_medium_us_results, file.path(project_dir, "xgb_medium_us_results.rds"))
+```
+
+# **Slow XGBoost Models**
+
+## *Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+xgb_slow_params <- list(
+  objective = "binary:logistic",
+  eval_metric = "aucpr",
+  max_depth = 4,
+  eta = 0.03,
+  subsample = 0.8,
+  colsample_bytree = 0.8,
+  min_child_weight = 3
+)
+
+xgb_slow_nrounds <- 260
+xgb_slow_threshold <- 0.65
+```
+
+### Build Boosted Ensemble
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+
+xgb_slow <- xgboost::xgboost(
+  data = data.matrix(train %>% select(-loan_default)),
+  label = ifelse(train$loan_default == "Yes", 1, 0),
+  params = xgb_slow_params,
+  nrounds = xgb_slow_nrounds,
+  verbose = 0
+)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+xgb_slow_prob <- predict(
+  object = xgb_slow,
+  newdata = data.matrix(hold %>% select(-loan_default))
+)
+```
+
+#### Predict Class
+
+```{r}
+xgb_slow_class <- factor(
+  ifelse(xgb_slow_prob >= xgb_slow_threshold, "Yes", "No"),
+  levels = c("Yes", "No")
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+xgb_slow_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("Yes", "No")),
+  predicted = xgb_slow_class,
+  probability_yes = as.numeric(xgb_slow_prob)
+)
+```
+
+#### Preview Table
+
+```{r}
+head(xgb_slow_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+xgb_slow_metrics <- evaluate_classifier(
+  actual = xgb_slow_predictions$actual,
+  predicted = xgb_slow_predictions$predicted,
+  probability_yes = xgb_slow_predictions$probability_yes
+)
+
+xgb_slow_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(xgb_slow, file.path(project_dir, "xgb_slow_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+xgb_slow_results <- xgb_slow_metrics %>%
+  mutate(
+    model_type = "Boosted Tree Ensemble",
+    package = "xgboost",
+    model_variant = "xgb_slow",
+    sample = "Full",
+    threshold = xgb_slow_threshold,
+    nrounds = xgb_slow_nrounds,
+    max_depth = xgb_slow_params$max_depth,
+    eta = xgb_slow_params$eta,
+    subsample = xgb_slow_params$subsample,
+    colsample_bytree = xgb_slow_params$colsample_bytree,
+    min_child_weight = xgb_slow_params$min_child_weight
+  )
+
+saveRDS(xgb_slow_results, file.path(project_dir, "xgb_slow_results.rds"))
+```
+
+## *Undersampled Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+xgb_slow_us_threshold <- 0.61
+```
+
+### Build Boosted Ensemble
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+
+xgb_slow_us <- xgboost::xgboost(
+  data = data.matrix(train_under %>% select(-loan_default)),
+  label = ifelse(train_under$loan_default == "Yes", 1, 0),
+  params = xgb_slow_params,
+  nrounds = xgb_slow_nrounds,
+  verbose = 0
+)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+xgb_slow_us_prob <- predict(
+  object = xgb_slow_us,
+  newdata = data.matrix(hold %>% select(-loan_default))
+)
+```
+
+#### Predict Class
+
+```{r}
+xgb_slow_us_class <- factor(
+  ifelse(xgb_slow_us_prob >= xgb_slow_us_threshold, "Yes", "No"),
+  levels = c("Yes", "No")
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+xgb_slow_us_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("Yes", "No")),
+  predicted = xgb_slow_us_class,
+  probability_yes = as.numeric(xgb_slow_us_prob)
+)
+```
+
+#### Preview Table
+
+```{r}
+head(xgb_slow_us_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+xgb_slow_us_metrics <- evaluate_classifier(
+  actual = xgb_slow_us_predictions$actual,
+  predicted = xgb_slow_us_predictions$predicted,
+  probability_yes = xgb_slow_us_predictions$probability_yes
+)
+
+xgb_slow_us_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(xgb_slow_us, file.path(project_dir, "xgb_slow_us_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+xgb_slow_us_results <- xgb_slow_us_metrics %>%
+  mutate(
+    model_type = "Boosted Tree Ensemble",
+    package = "xgboost",
+    model_variant = "xgb_slow",
+    sample = "Undersampled",
+    threshold = xgb_slow_us_threshold,
+    nrounds = xgb_slow_nrounds,
+    max_depth = xgb_slow_params$max_depth,
+    eta = xgb_slow_params$eta,
+    subsample = xgb_slow_params$subsample,
+    colsample_bytree = xgb_slow_params$colsample_bytree,
+    min_child_weight = xgb_slow_params$min_child_weight
+  )
+
+saveRDS(xgb_slow_us_results, file.path(project_dir, "xgb_slow_us_results.rds"))
+```
+
+# **LogitBoost Models - 50 Iterations**
+
+## *Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+logitboost_50_niter <- 50
+logitboost_50_threshold <- 0.12
+```
+
+### Build Boosted Ensemble
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+
+logitboost_50 <- caTools::LogitBoost(
+  data.matrix(train %>% select(-loan_default)),
+  ifelse(train$loan_default == "Yes", 1, 0),
+  nIter = logitboost_50_niter
+)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+logitboost_50_prob <- predict(
+  object = logitboost_50,
+  data.matrix(hold %>% select(-loan_default)),
+  type = "raw"
+)
+
+logitboost_50_prob <- as.numeric(logitboost_50_prob[, "1"])
+```
+
+#### Predict Class
+
+```{r}
+logitboost_50_class <- factor(
+  ifelse(logitboost_50_prob >= logitboost_50_threshold, "Yes", "No"),
+  levels = c("Yes", "No")
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+logitboost_50_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("Yes", "No")),
+  predicted = logitboost_50_class,
+  probability_yes = as.numeric(logitboost_50_prob)
+)
+```
+
+#### Preview Table
+
+```{r}
+head(logitboost_50_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+logitboost_50_metrics <- evaluate_classifier(
+  actual = logitboost_50_predictions$actual,
+  predicted = logitboost_50_predictions$predicted,
+  probability_yes = logitboost_50_predictions$probability_yes
+)
+
+logitboost_50_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(logitboost_50, file.path(project_dir, "logitboost_50_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+logitboost_50_results <- logitboost_50_metrics %>%
+  mutate(
+    model_type = "Boosted Tree Ensemble",
+    package = "caTools",
+    model_variant = "logitboost_50",
+    sample = "Full",
+    threshold = logitboost_50_threshold,
+    nIter = logitboost_50_niter
+  )
+
+saveRDS(logitboost_50_results, file.path(project_dir, "logitboost_50_results.rds"))
+```
+
+## *Undersampled Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+logitboost_50_us_threshold <- 0.51
+```
+
+### Build Boosted Ensemble
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+
+logitboost_50_us <- caTools::LogitBoost(
+  data.matrix(train_under %>% select(-loan_default)),
+  ifelse(train_under$loan_default == "Yes", 1, 0),
+  nIter = logitboost_50_niter
+)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+logitboost_50_us_prob <- predict(
+  object = logitboost_50_us,
+  data.matrix(hold %>% select(-loan_default)),
+  type = "raw"
+)
+
+logitboost_50_us_prob <- as.numeric(logitboost_50_us_prob[, "1"])
+```
+
+#### Predict Class
+
+```{r}
+logitboost_50_us_class <- factor(
+  ifelse(logitboost_50_us_prob >= logitboost_50_us_threshold, "Yes", "No"),
+  levels = c("Yes", "No")
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+logitboost_50_us_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("Yes", "No")),
+  predicted = logitboost_50_us_class,
+  probability_yes = as.numeric(logitboost_50_us_prob)
+)
+```
+
+#### Preview Table
+
+```{r}
+head(logitboost_50_us_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+logitboost_50_us_metrics <- evaluate_classifier(
+  actual = logitboost_50_us_predictions$actual,
+  predicted = logitboost_50_us_predictions$predicted,
+  probability_yes = logitboost_50_us_predictions$probability_yes
+)
+
+logitboost_50_us_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(logitboost_50_us, file.path(project_dir, "logitboost_50_us_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+logitboost_50_us_results <- logitboost_50_us_metrics %>%
+  mutate(
+    model_type = "Boosted Tree Ensemble",
+    package = "caTools",
+    model_variant = "logitboost_50",
+    sample = "Undersampled",
+    threshold = logitboost_50_us_threshold,
+    nIter = logitboost_50_niter
+  )
+
+saveRDS(logitboost_50_us_results, file.path(project_dir, "logitboost_50_us_results.rds"))
+```
+
+# **LogitBoost Models - 100 Iterations**
+
+## *Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+logitboost_100_niter <- 100
+logitboost_100_threshold <- 0.12
+```
+
+### Build Boosted Ensemble
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+
+logitboost_100 <- caTools::LogitBoost(
+  data.matrix(train %>% select(-loan_default)),
+  ifelse(train$loan_default == "Yes", 1, 0),
+  nIter = logitboost_100_niter
+)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+logitboost_100_prob <- predict(
+  object = logitboost_100,
+  data.matrix(hold %>% select(-loan_default)),
+  type = "raw"
+)
+
+logitboost_100_prob <- as.numeric(logitboost_100_prob[, "1"])
+```
+
+#### Predict Class
+
+```{r}
+logitboost_100_class <- factor(
+  ifelse(logitboost_100_prob >= logitboost_100_threshold, "Yes", "No"),
+  levels = c("Yes", "No")
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+logitboost_100_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("Yes", "No")),
+  predicted = logitboost_100_class,
+  probability_yes = as.numeric(logitboost_100_prob)
+)
+```
+
+#### Preview Table
+
+```{r}
+head(logitboost_100_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+logitboost_100_metrics <- evaluate_classifier(
+  actual = logitboost_100_predictions$actual,
+  predicted = logitboost_100_predictions$predicted,
+  probability_yes = logitboost_100_predictions$probability_yes
+)
+
+logitboost_100_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(logitboost_100, file.path(project_dir, "logitboost_100_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+logitboost_100_results <- logitboost_100_metrics %>%
+  mutate(
+    model_type = "Boosted Tree Ensemble",
+    package = "caTools",
+    model_variant = "logitboost_100",
+    sample = "Full",
+    threshold = logitboost_100_threshold,
+    nIter = logitboost_100_niter
+  )
+
+saveRDS(logitboost_100_results, file.path(project_dir, "logitboost_100_results.rds"))
+```
+
+## *Undersampled Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+logitboost_100_us_threshold <- 0.51
+```
+
+### Build Boosted Ensemble
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+
+logitboost_100_us <- caTools::LogitBoost(
+  data.matrix(train_under %>% select(-loan_default)),
+  ifelse(train_under$loan_default == "Yes", 1, 0),
+  nIter = logitboost_100_niter
+)
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+logitboost_100_us_prob <- predict(
+  object = logitboost_100_us,
+  data.matrix(hold %>% select(-loan_default)),
+  type = "raw"
+)
+
+logitboost_100_us_prob <- as.numeric(logitboost_100_us_prob[, "1"])
+```
+
+#### Predict Class
+
+```{r}
+logitboost_100_us_class <- factor(
+  ifelse(logitboost_100_us_prob >= logitboost_100_us_threshold, "Yes", "No"),
+  levels = c("Yes", "No")
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+logitboost_100_us_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("Yes", "No")),
+  predicted = logitboost_100_us_class,
+  probability_yes = as.numeric(logitboost_100_us_prob)
+)
+```
+
+#### Preview Table
+
+```{r}
+head(logitboost_100_us_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+logitboost_100_us_metrics <- evaluate_classifier(
+  actual = logitboost_100_us_predictions$actual,
+  predicted = logitboost_100_us_predictions$predicted,
+  probability_yes = logitboost_100_us_predictions$probability_yes
+)
+
+logitboost_100_us_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+#### Save Model
+
+```{r}
+saveRDS(logitboost_100_us, file.path(project_dir, "logitboost_100_us_model.rds"))
+```
+
+#### Save Results
+
+```{r}
+logitboost_100_us_results <- logitboost_100_us_metrics %>%
+  mutate(
+    model_type = "Boosted Tree Ensemble",
+    package = "caTools",
+    model_variant = "logitboost_100",
+    sample = "Undersampled",
+    threshold = logitboost_100_us_threshold,
+    nIter = logitboost_100_niter
+  )
+
+saveRDS(logitboost_100_us_results, file.path(project_dir, "logitboost_100_us_results.rds"))
+```
