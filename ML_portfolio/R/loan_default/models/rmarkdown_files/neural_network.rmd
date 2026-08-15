@@ -1,6 +1,7 @@
 ---
-title: "Neural Network Machine Learning For Predicting Loan Default"
+title: "Neural Network Modeling for Predicting Loan Default"
 author: "storera17"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
   html_document:
     code_folding: show
@@ -12,822 +13,920 @@ output:
     code_download: yes
   word_document:
     toc: no
+params:
+  response_var: "loan_default"
+  id_var: ["load_id"] #identifier to be dropped
+
 ---
 
-```{r setup, include=FALSE,message=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE)
-knitr::opts_chunk$set(fig.width=6, fig.height=4)
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo=TRUE,message=FALSE,warning=FALSE)
+knitr::opts_chunk$set(fig_width=6,fig_height=4)
 
 if(require(pacman)==0)
-   {install.packages("pacman")}
-pacman::p_load(devtools,caret,cluster,dplyr,fastDummies,leaps,pacman,tidyverse,skimr,fastDummies,GGally,DataExplorer,ggrepel,ggthemes,dslabs,lubridate,janitor,e1071,scales,recipes,magrittr,forcats,tidycensus,zipcodeR,tidygeocoder,tigris,sf, purrr,ROCR,rpart,rpart.plot,keras,tensorflow)
+    {install.packages("pacman")}
 
-if (!require(mlba)) {
-  library(devtools)
-  install_github("gedeck/mlba/mlba", force=TRUE)
-}
-pacman::p_load(mlba,tidyverse)
+pacman::p_load(
+    caret,
+    caTools,
+    corrplot,
+    cluster,
+    DataExplorer,
+    devtools,
+    doParallel,
+    dplyr,
+    dslabs,
+    e1071,
+    fastDummies,
+    forcats,
+    GGally,
+    ggplot2,
+    ggthemes,
+    ggrepel,
+    glmnet,
+    janitor,
+    leaps,
+    lubridate,
+    magrittr,
+    mlba,
+    nnet,
+    pacman,
+    pROC,
+    randomForest,
+    ranger,
+    recipes,
+    rpart,
+    rpart.plot,
+    ROCR,
+    purrr,
+    scales,
+    sf,
+    skimr,
+    tidycensus,
+    tidygeocoder,
+    tidyverse,
+    tigris,
+    xgboost,
+    zipcodeR
+    # Add more packages as needed here
+)
+
+set.seed(123)
+
+project_dir <- "ML_portfolio/R/loan_default/data"
 ```
 
-# Introduction
-> In this section, we attempt to identify the objective, briefly explain the project (and what has been accomplished so far), introduce the data, project a data dictionary, and build the foundational pieces relevant towards construction of our neural network model.  
+# **Introduction**
 
-**Objective**
+Neural networks are flexible supervised learning models that can be used for classification and regression problems. In binary classification, a neural network estimates the probability that an observation belongs to a target class. For this project, the target class is loan default, where the model attempts to distinguish borrowers who defaulted from borrowers who did not default. Neural networks are useful in this setting because they can model complex, nonlinear relationships among borrower characteristics, loan terms, credit history, income, debt obligations, and other financial predictors without requiring the analyst to specify the exact functional form of those relationships in advance.
 
-The purpose of this report is to determine a model that best fits the data with the intention of optimizing F1 score.
+Unlike decision trees and random forests, neural networks require additional data formatting before model fitting. Numeric predictors should be scaled so that variables measured on larger scales do not dominate model training. Categorical predictors must also be converted into numeric dummy variables so they can be used as inputs in the network. These formatting steps are necessary because neural networks estimate weights across input variables, hidden-layer neurons, and output classes. In addition, the target variable must be coded carefully so that the positive class, `Yes`, corresponds to loan default. This ordering is important because the evaluation focuses on the model’s ability to identify borrowers who defaulted.
 
-**Brief Project Summary (Historical and Present)**
+A neural network contains an input layer, one or more hidden layers, and an output layer. Each predictor contributes to the input layer, and each input is connected to hidden neurons through estimated weights. The hidden layer allows the model to learn nonlinear combinations of predictors. The output layer then converts these learned patterns into predicted class probabilities. In this analysis, single-hidden-layer neural network models were evaluated using the `nnet` package. The main model parameters were `size`, which controls the number of hidden-layer neurons, and `decay`,` which applies weight decay regularization. Larger networks can model more complex relationships, while stronger weight decay can reduce overfitting by penalizing large model weights.
 
-The ultimate goal of this project is to fit a model that optimizes F1 score. The models in question are decision trees, ensembled decision trees (Random Forest), regularized logistic regression, and neural network model. Each model has their advantages and disadvantages. The particular model of interest in this report is a neural network. Previously, the other modeling methods were employed and will be looked at in comparing the performance of the neural network model that is fitted. In general, a model will be made using both a balanced and unbalanced dataset to train said model. 
+Overfitting is a major concern in neural network modeling. Because neural networks estimate many parameters, they can fit the training data closely while performing poorly on unseen data. This risk is especially important when the dataset includes noisy predictors, sparse categories, or many dummy variables. To reduce overfitting, the modeling workflow considered regularization through weight decay, limited hidden-layer size, scaled numeric inputs, and variable selection. Variable selection is important because each retained predictor increases the number of input connections in the network. In this project, neural network variants were evaluated using selected predictors from the cleaned modeling workflow so that model complexity remained controlled.
 
-**Data Description**
+Neural networks offer several advantages for loan default prediction. They can learn nonlinear interactions, accommodate both continuous and categorical information after formatting, and provide flexible probability estimates for classification. However, they also have important limitations. They require careful preprocessing, are sensitive to tuning choices, may be computationally expensive, and are less interpretable than logistic regression or decision tree models. This reduced interpretability is often described as the black-box problem because the internal weights of the model do not translate as directly into simple decision rules.
 
-The dataset is very similar to previously reported datasets. However, there are new engineered features that have been added. To begin, FICO score was captured by taking the difference between the upper and lower ends fico score range, then dividing this term by 2. Next, the relationship between loan amount and installment was incorporated by dividing the installment by the loan amount. Similarly, another ratio term was created that takes into account the installment and annuanl income by dividing the installment by the annual income. The credit history expressed by days was captured by subtracting the most recent date credit was pulled by the earliest reported credit line of the borrower. Furthermore, we extracted the credit history by years through dividing the previous term by 365. 
+The neural network models were evaluated using F1 score as the primary performance metric because loan default is an imbalanced classification problem. Precision, sensitivity/recall, balanced accuracy, accuracy, specificity, and AUC were also used to characterize model performance. Sensitivity was especially important because failing to identify borrowers who default may carry substantial financial risk. Therefore, the selected neural network model should not only achieve a competitive F1 score but also maintain strong sensitivity for the default class.
 
-**Variable Descriptions**
+# **Read in the Data**
 
-| **Variable**              | **Type**  | **Description**                                                                 |
-|--------------------------|----------:|:--------------------------------------------------------------------------------|
-| `loan_default`           | Binary     | Whether the loan has defaulted. Values: "Yes", "No".                      |
-| `term`                   | Binary     | The number of payments on the loan (36 or 60 months).          |
-| `debt_settlement_flag`   | Binary     | Whether borrower is in a debt settlement program (Y/N).        |
-| `home_ownership`         | Factor     | Home ownership status                                          |
-| `verification_status`    | Factor     | Whether income was verified                                    |
-| `purpose`                | Factor     | Category provided by the borrower for the loan request.        |
-| `initial_list_status`    | Factor     | Initial listing status of the loan                             |
-| `application_type`       | Factor     | Type of application                                            |
-| `issue_year`             | Factor     | Number of years the loan has been issued                       |
-| `revol_util`             | Numeric    | Revolving line utilization rate (credit used / total credit).  |
-| `total_acc`              | Numeric    | Total number of credit lines in the borrower’s credit file.    |
-| `pub_rec_bankruptcies`   | Numeric    | Number of public record bankruptcies.                          |
-| `delinq_2yrs`            | Numeric    | Number of 30+ days delinquency incidents in past 2 years.      |
-| `inq_last_6mths`.        | Numeric    | Number of credit inquiries in the past 6 months.               |
-| `mths_since_last_delinq` | Numeric    | Months since last delinquency (NA if never).                   |
-| `acc_now_delinq`         | Numeric    | Does the customer have a certificate of deposit account? (0 = No, 1 = Yes).     |
-| `log_loan_amnt`          | Numeric    | The log of the annual income.                                  |
-| `emp_length_numeric`     | Numeric    | Employment length in years                                    |
-| `log_annual_inc`         | Numeric    | The log of the annual income.             |
-| `dti_cap`                | Numeric    | Maximized dti value we capped dti values at. To take into accont of unrealistic outliers.            |
-| `dti_outlier_flag`       | Numeric    | Flag to show dti outliers. To take into accont of unrealistic outliers.      |
-| `open_acc_capped`        | Numeric    | Maximized open account value we capped open accounts at the log of the annual income.             |
-| `open_acc_outlier_flag`  | Numeric    | The capture of the open account value being an outlier   |
-| `pub_rec_capped`         | Numeric    | Number of derogatory public records with a cap.          |
-| `pub_rec_outlier_flag`   | Numeric    | Whether the value captured an outlier or not.     |
-| `log_revol_bal_capped`   | Numeric    | Transformed total revolving balance |
-| `log_revol_bal_outlier_flag` | Numeric |  Transformed total revolving balance indicator if originally value was an outlier       |
-| `mort_acc_capped`        | Numeric    | Number of mortgage accounts with a cap to handle outliers             |
-| `mort_acc_outlier_flag`  | Numeric    | Indicator for whether the value was an outlier   |
-| `sub_grade_score`        | Numeric    | The sub grade and grade encapsulated score.       |
-| `fico_score`             | Numeric    | The average between the sum of the upper and lower ends of the borrow's FICO score range     |
-| `installment_to_loanamt` | Numeric    | Ratio of installment monthly payment owed by the borrower if the loan originates to loan amount |
-| `dti_annual_inc_interaction`        | Numeric    | Interaction between dti and annual income.             |
-| `credit_history_years`   | Numeric    | Years between most recent credit pull date and earliest credit pull date           |
- 
-**Background**
-
-*Additional Requirements in Neural Networks*
-
-When fitting a neural network there are additional requirements that are needed. The first requirement involves the necessity that additional preprocessing measuring are needed to occur in order to ensure the optimal capability of the data is exploited when fitting to a neural network model. In other words, for the neural network model to operate properly, some data will need to be converted. In this report, we will utilize the recipes package to do these further transformations. To put shortly, scaling will be done to all numerics and all categoricals will be converted into dummies where values of 0 and 1 can obtained. We must do this in order to ensure proper exercising of the neural network capability. 
-
-The second requirement that must be met when fitting a neural network is ensuring the order of the target variable. Since we are interested in knowning the model's capability in predicting the classification of borrowers with regards to loan default, we need to order the target variable in a specific manner. More specifically, the target variable needs to be ordered with the positive class first (since it is a factor). We ensure this by utilizing the factor() function.
-
-*The Overfitting Problem*
-
-One of the biggest problems with construction of neural networks are their high culpability to experience overfitting, especially in regards to small and noisy datasets. Neural networks experience this overfitting problem because they estimate a large number of weights (parameters). This leads to a model that fits the training data extremely well but generalizes poorly to unseen data. The way neural networks control overfitting involves reduction of model complexity (choosing only the "best" variables to fit the model), regularization (e.g., weight decay), and cross-validation. We will use the caret package to systematically scan model configurations with the intention of minimizing overfitting. Minimizaiton will mostly be impacted by the tuning of key hyperparameters using cross-validation. 
-
-*Tuning Hyperparameters with nnet in Caret*
-
-The method we will use to fit a neural network is in the caret package using the train() function. We can select a neural network model by simply specifying method="nnet". Further optimization of the neural network can be doen easily through the aid of tuneGrid or tuneLength arguments in the train() function. These arguments will search for the optimal hyperparameters based on the metric specified. In the case of neural networks, the hyperparameters we aim to tune are:
-
-- **size**: The number of neurons in the hidden layer 
-- **decay**: A penalty very similar to an L2 penalty (ridge). 
-
-We introduce fine tuning of our neural network model through the use of the tuneGrid argument, which we previously mentioned. We will ensure the neural network architecture will best balance fit with generalizability in order to reduce overfitting. 
-
-*Importance of Variable Selection*
-
-As mentioned prior, neural network models are extremely prone to overfitting. As a consequence, the selection of variables to be used in the model construction needs to be done cautiously. Every variable selected plays a part in the input layer. As a result, we need to utilize a strategy that maximizes the most important variables. Some strategies that can be used for variable selection methods when constructing neural network models are stepwise/lasso selection from logistic regression or selecting the most important variables after implementation of an ensemble tree-based model (Random Forest/Boosting). The approaches we will take will be through a lasso selection from logistic regression and most important variables from a Random Forest ensemble. 
-
-*Why Use Neural Network Models?*
-
-Neural network models offer an array of benefits. Some of these are captured below:
-
-- Can model complex, nonlinear relationships
-- Flexibility/fluidity and generalizability 
-- Adapt well with both continuous and categorical inputs
-- Specification of form of the relationship is not necessary
-- Universal capability of approximating any continuous function in theory (quantum interactions?)
-
-*Limitations of Neural Network Models*
-
-Neural networks come with limitations as well. A list of a few of the limitations of neural network models is below:
-
-- Requirement of additional and careful preprocessing
-- The overfitting problem
-- The black box problem (Interpretation difficulty)
-- Hyperparameter tuning sensitivity
-- Computational expense for training 
-- Absence of feature selection 
-
-*Simple Tabular Summary of Important Neural Network Parameters*
-
-|    *Measurement*   |  *Symbol*  | *Simple Formula* | *Detailed Description*                                                                                          |
-|--------------------|------------|------------------|-----------------------------------------------------------------------------------------------------------------|
-|   *Input Weights*  |     W0     | W0 = I0 x hN     | The input weight is determined by multiplying the number of inputs by the number of hidden neurons              |
-|   *Input Biases*   |     B0     | B0 = hN          | The number of input biases is given by the number of hidden neurons                                             |
-|  *Output Weights*  |     Wf     | Wf = If x hN     | The number of output weights is given by multiplying the number of outputs by the number of hidden neurons      |
-|  *Output Biases*   |     Bf     | Bf = If          | The number of output biases is given by the number of outputs                                                   |
-| *Total Parameters* |    Xtot    | Xtot = W0 + B0 + Wf + Bf = (W0+ Wf) + (B0 + Bf) | The total number of parameters is the sum of input and output weights and biases |
-
-
-Now that we have discussed the core properties and features that go into making a neural network efficiently, we can turn back to these concepts during our construction of a neural network model for predicting of loan default. It is critical to highlight the importance of capturing those who defaulted rather than those who did not. Despite the determinant being the F1 score of a model, we propose that a more significant parameter be the sensitivity of the model. Given the loss that encompasses incorrectly predicting a borrower of someone who will default on their loan, it would be appropriate to ensure the model that is choosen as optimal have a sensitivity as well as a high F1 score. Hence, we present the strategic approach to building a neural network to properly predict loan default. 
-
-# Read, Preview, and Check Distribution of Data
-> First, we will load in the data and preview it. We want to ensure no significant changes have taken place. Further elaboration upon this will be done later. 
-
-**Read Data**
-
-The training dataset is represented as 'train' throughout this document. Additionally, the holdout dataset is represented as 'hold'. 
+## *Training Dataset*
 
 ```{r}
-train <- readRDS("3B_Palmer-Storer_train_raw.rds") 
-hold <- readRDS("3B_Palmer-Storer_holdout_raw.rds")
+train <- readRDS(file.path(project_dir, "train.rds"))
 ```
 
-**Preview the data**
+## *Undersampled Training Dataset*
 
-Here, we preview the data we cleaned to ensure everything was loaded smoothly and is ready to be used for model training and performance evaluation. We do this using the skim() function from the skimr package. 
+```{r}
+train_under <- readRDS(file.path(project_dir, "train_under.rds"))
+```
+
+## *Holdout Dataset*
+
+```{r}
+hold <- readRDS(file.path(project_dir, "holdout.rds"))
+```
+
+# **Preview the Data**
+
+## *Training Dataset*
 
 ```{r}
 skimr::skim(train)
+```
+
+## *Undersampled Training Dataset*
+
+```{r}
+skimr::skim(train_under)
+```
+
+## *Holdout Dataset*
+
+```{r}
 skimr::skim(hold)
 ```
 
-```{r}
-dim(train)
-```
+# **Check Target Variable Distributions**
 
-**Check Target Variable Distributions**
-
-*Training*
-
-The distribution of the target variable in the training dataset is shown below. There is approximately a 20/80 split of Yes/No. 
-```{r}
-table(train$loan_default)
-```
-
-*Holdout*
-
-The distribution of the target variable in the holdout dataset is shown below. Just as in the training dataset, there is approximately a 20/80 split of Yes/No in the target variable. 
-```{r}
-table(hold$loan_default)
-```
-
-# Additional Preprocessing   
-
-**Additional Preprocessing with Recipes**
-
-In this step, the data is further preproccessed using the recipes package. This is an easy way to apply the same steps to both the training and test data as well as new data. It is important to NNs that we ensure the data values are equal to 0, 1 or in between these values. NN models are extremely sensitive to outliers. It is helpful to transform highly skewed variables during preprocessing steps. If additional precautions are not done, then nnet package will not work. We used the arguments seen in the code above. They are further elaborated below:
-
-- step_range(all_numeric_predictors()) specifies to scale all numeric variables to be between [0,1]
-- step_dummy(all_nominal_predictors()) specifies all categorical variables to be 0 or 1. 
-
-*Full Dataset*
-
-```{r}
-train_recipe <- recipe(loan_default ~ ., data = train) %>%
-  step_range(all_numeric_predictors()) %>%
-  step_dummy(all_nominal_predictors(), one_hot = FALSE)
-
-prep <- prep(train_recipe)
-train_ready <- bake(prep, new_data = train)
-hold_ready <- bake(prep, new_data = hold)
-head(train_ready)
-head(hold_ready)
-```
-
-*Undersampling Majority Class*
-
-Here, we undersample the data, such the the number for each class is equivalent.
-
-```{r}
-set.seed(123)
-maj <- train_ready %>% dplyr::filter(loan_default == "No")
-min <- train_ready %>% dplyr::filter(loan_default == "Yes")
-maj_under <- maj %>% dplyr::sample_n(nrow(min))
-train_ready_us <- dplyr::bind_rows(min, maj_under) %>% dplyr::slice_sample(prop = 1)
-prop.table(table(train_ready_us$loan_default))
-
-set.seed(123)
-maj <- train %>% dplyr::filter(loan_default == "No")
-min <- train %>% dplyr::filter(loan_default == "Yes")
-maj_under <- maj %>% dplyr::sample_n(nrow(min))
-train_us <- dplyr::bind_rows(min, maj_under) %>% dplyr::slice_sample(prop = 1)
-prop.table(table(train_us$loan_default))
-```
-
-**Important: Ensuring POSITIVE CLASS is the FIRST factor level**
-
-First, we check the order of out target variable 'loan_default'. Also, let's compare the counts before and after the recipes() function was used on the training ('train') and holdout/test dataset ('hold'). After comparing the counts, it looks like everything made it through with consistent counts as prior to the recipes() function employment. 
+## *Training Dataset*
 
 ```{r}
 table(train$loan_default)
-table(train_ready$loan_default)
+prop.table(table(train$loan_default))
 ```
+
+## *Undersampled Training Dataset*
+
+```{r}
+table(train_under$loan_default)
+prop.table(table(train_under$loan_default))
+```
+
+## *Holdout Dataset*
 
 ```{r}
 table(hold$loan_default)
-table(hold_ready$loan_default)
+prop.table(table(hold$loan_default))
 ```
 
+# **Format Target Variable**
+
+The response variable is temporarily ordered with `Yes` as the first level for `caret::twoClassSummary()` during model training. Prediction tables and evaluation still explicitly identify `Yes` as the positive class.
+
+## *Training Dataset*
+
 ```{r}
-table(train_ready_us$loan_default)
+train <- train %>%
+  mutate(loan_default = factor(loan_default, levels = c("Yes", "No")))
 ```
 
-# Variable Selection Methods
-## Method 1: Logistic Regression with Lasso Selection**
-
-We have fitted our data to a logistic regression model using elastic net selection. However, for careful consideration, we will performance another fitting of a logistic regression model. The difference will be that we will use lasso selection instead of elastic net. We begin trying to select the best combination of 37 variables. First, we will use a logistic regression with lasso selection. Then, we will use a random forest model fitting
-
-**Set Up trainControl Object**
-
-We begin trying to select the best combination of 37 variables. First, we will use a logistic regression with lasso selection. Then, we will use a random forest model fitting. 
-
-We are running 5 cross-validations on our dataset. 
+## *Undersampled Training Dataset*
 
 ```{r}
-ctrl <- trainControl(method = "cv", number = 5,
-                     summaryFunction = twoClassSummary,
-                     classProbs = TRUE,
-                     savePredictions = "final")
+train_under <- train_under %>%
+  mutate(loan_default = factor(loan_default, levels = c("Yes", "No")))
 ```
 
-**Fit Model**
-
-The tuneGrid used only looks at change in the lambda value. For lasso selection, alpha is 1.
-
-*Fit on F1*
-
-To ensure that we account for all variability, we fit a regularized logistic regression model on F1 and ROC optimization. Here, we see the construction of the model fitted based on metric="F1" indicating this model was fitted based on F1 score. 
+## *Holdout Dataset*
 
 ```{r}
- # If already ran and stored object, load object here:
-logit <- readRDS("nn_logit_f.rds")
-logit_us <- readRDS("nn_logit_us.rds")
-## Set up Cluster
-# cores=parallel::detectCores()
-# cl=parallel::makeCluster(10)
-# doParallel::registerDoParallel(cl)
-# 
-# logit_us <- caret::train(
-#   loan_default ~ .,
-#   data = train_us,
-#   method = "glmnet",
-#   trControl = ctrl,
-#   tuneGrid = expand.grid(
-#     alpha = 1,
-#     lambda = seq(.001,.1, length=10)),
-#   metric = "F1",
-#   family = "binomial"
-# )
-# 
-# # Stop Cluster
-# parallel::stopCluster(cl)
-# foreach::registerDoSEQ()
+hold <- hold %>%
+  mutate(loan_default = factor(loan_default, levels = c("Yes", "No")))
 ```
 
-**Coefficients of Fitted Logistic Model Using Lasso Selection**
-
-Now that we have ran regularized logistic regression using lasso selection, we can extract the coefficients using the code in the chunk below for the regularized logistic regression based on metric="F1". 
+# **Create `evaluate_classifier()`**
 
 ```{r}
-coef(logit$finalModel,logit$bestTune$lambda)
+evaluate_classifier <- function(actual, predicted, probability_yes, positive_class = "Yes") {
+  actual <- factor(actual, levels = c("No", "Yes"))
+  predicted <- factor(predicted, levels = c("No", "Yes"))
+
+  cm <- caret::confusionMatrix(
+    data = predicted,
+    reference = actual,
+    positive = positive_class
+  )
+
+  roc_obj <- pROC::roc(
+    response = actual,
+    predictor = probability_yes,
+    levels = c("No", "Yes"),
+    direction = "<",
+    quiet = TRUE
+  )
+
+  precision <- cm$byClass["Precision"]
+  recall <- cm$byClass["Sensitivity"]
+
+  f1 <- ifelse(
+    precision + recall == 0,
+    0,
+    2 * precision * recall / (precision + recall)
+  )
+
+  tibble::tibble(
+    accuracy = as.numeric(cm$overall["Accuracy"]),
+    balanced_accuracy = as.numeric(cm$byClass["Balanced Accuracy"]),
+    precision = as.numeric(precision),
+    sensitivity_recall = as.numeric(recall),
+    specificity = as.numeric(cm$byClass["Specificity"]),
+    f1_score = as.numeric(f1),
+    auc = as.numeric(pROC::auc(roc_obj))
+  )
+}
 ```
 
+# **Additional Neural Network Formatting**
+
+## *Load Saved Feature-Selection Models*
+
+### Lasso Logistic Regression Models
+
 ```{r}
-coef(logit_us$finalModel,logit_us$bestTune$lambda)
+log_lasso <- readRDS(file.path(project_dir, "log_lasso_model.rds"))
+log_lasso_us <- readRDS(file.path(project_dir, "log_lasso_undersampled_model.rds"))
 ```
 
-Interestingly, most of the coefficient values as well as the corresponding coefficients match between the F1- and ROC-based regularized logistic regression models. So, we removed the ROC-based code and kept the F1-based code. 
-
-We can extract the variable names for the nonzero coefficients. 
+### Random Forest Models
 
 ```{r}
-coefs_matrix=coef(logit$finalModel,
-                  s=logit$bestTune$lambda)
-coefs=as.vector(coefs_matrix)
-nonzero_idx=which(coefs != 0)
-logit_names=rownames(coefs_matrix)[nonzero_idx]
-logit_names=logit_names[logit_names != "(Intercept)"]
+rf_fit <- readRDS(file.path(project_dir, "rf_cv_model.rds"))
+rf_fit_us <- readRDS(file.path(project_dir, "rf_cv_us_model.rds"))
+```
+
+## *Extract Variables from Lasso Logistic Regression*
+
+### Training Dataset
+
+```{r}
+coefs_matrix <- coef(
+  log_lasso$finalModel,
+  s = log_lasso$bestTune$lambda
+)
+
+coefs <- as.vector(coefs_matrix)
+nonzero_idx <- which(coefs != 0)
+
+logit_names <- rownames(coefs_matrix)[nonzero_idx]
+logit_names <- logit_names[logit_names != "(Intercept)"]
+
 logit_names
 ```
 
+### Undersampled Training Dataset
+
 ```{r}
-coefs_matrix_us=coef(logit_us$finalModel,
-                  s=logit_us$bestTune$lambda)
-coefs_us=as.vector(coefs_matrix_us)
-nonzero_idx_us=which(coefs_us != 0)
-logit_names_us=rownames(coefs_matrix_us)[nonzero_idx_us]
-logit_names_us=logit_names_us[logit_names_us != "(Intercept)"]
+coefs_matrix_us <- coef(
+  log_lasso_us$finalModel,
+  s = log_lasso_us$bestTune$lambda
+)
+
+coefs_us <- as.vector(coefs_matrix_us)
+nonzero_idx_us <- which(coefs_us != 0)
+
+logit_names_us <- rownames(coefs_matrix_us)[nonzero_idx_us]
+logit_names_us <- logit_names_us[logit_names_us != "(Intercept)"]
+
 logit_names_us
 ```
 
-*Save the Model Object*
+## *Extract Variables from Random Forest Importance*
 
-Here, we save the model object such that we do not have to repeatedly run the model after every time we wish to re-evaluate our code construction for whatever reason may be encountered. 
+### Training Dataset
+
 ```{r}
-saveRDS(logit, "nn_logit_us.rds")
-saveRDS(logit_us, "nn_logit_us.rds")
+rf_importance <- caret::varImp(rf_fit, scale = FALSE)$importance %>%
+  tibble::rownames_to_column("variable") %>%
+  mutate(
+    importance = rowMeans(across(where(is.numeric)), na.rm = TRUE)
+  ) %>%
+  arrange(desc(importance))
+
+rf_names <- rf_importance %>%
+  filter(importance > 10) %>%
+  pull(variable)
+
+rf_names
 ```
 
-## Method 2: Variable Importance From a Random Forest
-
-Here, we will fit a Random Forest model to the data and use the variable importance values to select the variables. We will cross-validate across 5 folds and use parallel processing as well. Also, we set the seed to ensure reproducibility. 
-
-**Fit Model**
+### Undersampled Training Dataset
 
 ```{r}
-# # If already stored and ran, load model object
-rf_fit=readRDS("nn_rf_fit.rds")
-rf_fit_us <- readRDS("nn_rf_fit_us.rds")
-# set.seed(123)
-# # Set up cross validation
-# cv_control=trainControl(method = "cv",
-#                         number = 5,
-#                         allowParallel = TRUE)
-# # Define Grid of `mtry`
-# mtry_grid=expand.grid(mtry=seq(1,ncol(train_us)-1, by=1))
-# 
-# # Set up Cluster
-# cores=parallel::detectCores()
-# cl=parallel::makeCluster(10)
-# doParallel::registerDoParallel(cl)
-# 
-# # Train the RF model
-# rf_fit_us=train(loan_default~.,
-#              data=train_us,
-#              method="rf",
-#              trControl=cv_control,
-#              tuneGrid=mtry_grid,
-#              ntree=50,
-#              importance=TRUE,
-#              nodesize=4
-#              )
-# 
-# # Stop Cluster
-# parallel::stopCluster(cl)
-# foreach::registerDoSEQ()
+rf_importance_us <- caret::varImp(rf_fit_us, scale = FALSE)$importance %>%
+  tibble::rownames_to_column("variable") %>%
+  mutate(
+    importance = rowMeans(across(where(is.numeric)), na.rm = TRUE)
+  ) %>%
+  arrange(desc(importance))
+
+rf_names_us <- rf_importance_us %>%
+  filter(importance > 10) %>%
+  pull(variable)
+
+rf_names_us
 ```
 
-*Save Random Forest Model Object*
-
-Here, we saved the model we obtained for the ensemble tree model such that we would not have to repeat running the model each time we wish to re-evaluate anything. 
+## *Create Neural Network Formatting Functions*
 
 ```{r}
-# saveRDS(rf_fit, "nn_rf_fit_us.rds")
-```
+scale_matrix_pair <- function(train_x, hold_x) {
+  train_x[!is.finite(train_x)] <- 0
+  hold_x[!is.finite(hold_x)] <- 0
 
-**Plot Variable Importance**
+  scaled_train <- scale(train_x)
+  center_values <- attr(scaled_train, "scaled:center")
+  scale_values <- attr(scaled_train, "scaled:scale")
+  scale_values[scale_values == 0] <- 1
 
-After fitting to a random forest model, we can now plot the variable importance. This allows us to see which variables contributed the most to the decision-making process in the model. 
+  scaled_hold <- scale(
+    hold_x,
+    center = center_values,
+    scale = scale_values
+  )
 
-```{r}
-randomForest::varImpPlot(rf_fit$finalModel, type=2)
+  scaled_train[!is.finite(scaled_train)] <- 0
+  scaled_hold[!is.finite(scaled_hold)] <- 0
+
+  list(
+    train = as.data.frame(scaled_train),
+    hold = as.data.frame(scaled_hold)
+  )
+}
 ```
 
 ```{r}
-randomForest::varImpPlot(rf_fit_us$finalModel, type=2)
+prepare_nn_data <- function(training_data,
+                            holdout_data,
+                            selected_columns,
+                            target = "loan_default") {
+  train_x <- model.matrix(
+    stats::as.formula(paste(target, "~ . - 1")),
+    data = training_data
+  )
+
+  hold_x <- model.matrix(
+    stats::as.formula(paste(target, "~ . - 1")),
+    data = holdout_data
+  )
+
+  missing_hold_cols <- setdiff(colnames(train_x), colnames(hold_x))
+
+  for (v in missing_hold_cols) {
+    hold_x <- cbind(hold_x, 0)
+    colnames(hold_x)[ncol(hold_x)] <- v
+  }
+
+  extra_hold_cols <- setdiff(colnames(hold_x), colnames(train_x))
+
+  if (length(extra_hold_cols) > 0) {
+    hold_x <- hold_x[, !colnames(hold_x) %in% extra_hold_cols, drop = FALSE]
+  }
+
+  hold_x <- hold_x[, colnames(train_x), drop = FALSE]
+
+  selected_columns <- intersect(selected_columns, colnames(train_x))
+
+  if (length(selected_columns) == 0) {
+    stop("No selected variables matched the neural network model matrix.")
+  }
+
+  train_x <- train_x[, selected_columns, drop = FALSE]
+  hold_x <- hold_x[, selected_columns, drop = FALSE]
+
+  scaled <- scale_matrix_pair(train_x, hold_x)
+
+  train_ready <- scaled$train %>%
+    mutate(loan_default = factor(training_data[[target]], levels = c("Yes", "No")))
+
+  hold_ready <- scaled$hold %>%
+    mutate(loan_default = factor(holdout_data[[target]], levels = c("Yes", "No")))
+
+  list(
+    train = train_ready,
+    hold = hold_ready,
+    selected_variables = selected_columns
+  )
+}
 ```
 
-**Selecting Variables**
+## *Create Neural Network Modeling Sets*
 
-For simplicity, we will select the variables associated with a mean decrease in Gini above 20. This was how we determined the important variables in our class notes, but we will try other impurity measures (either different Gini Indexes or entropies).
+### Logistic Regression Variable Selection - Training Dataset
 
 ```{r}
-imp=varImp(rf_fit$finalModel,type=2)
-gini_gt_10=rownames(imp)[imp$Overall > 10]
-gini_gt_10
-
-imp_us=varImp(rf_fit_us$finalModel,type=2)
-gini_gt_10_us=rownames(imp_us)[imp_us$Overall > 10]
-gini_gt_10_us
+log_nn_data <- prepare_nn_data(
+  training_data = train,
+  holdout_data = hold,
+  selected_columns = logit_names
+)
 ```
 
-# Fit a Neural Network
-> Recall, there is no direct method for variable selection within caret to select variables to use for the neural network model fitting. If you do not do variable selection, then overfitting is extremely likely to occur. For this reason, we have to utilize the methods employed above to determine important variables in different model creation and then compare the fitted neural network model that was based on these variables.
+### Logistic Regression Variable Selection - Undersampled Training Dataset
 
-**Set up trainControl**
-
-Here, we define the train control using cross-validation with k = 10 folds. Additionally, we set up our tune grid here. In our tune grid, we see totally new hyperparameters being defined:
-
-- *size* 
-- *decay*
-
-We already defined these hyperparameters previously in an earlier discussion. 
-
-**caret nnet set up**
 ```{r}
-# define train control
-trControl = trainControl(
+log_nn_data_us <- prepare_nn_data(
+  training_data = train_under,
+  holdout_data = hold,
+  selected_columns = logit_names_us
+)
+```
+
+### Random Forest Variable Selection - Training Dataset
+
+```{r}
+rf_nn_data <- prepare_nn_data(
+  training_data = train,
+  holdout_data = hold,
+  selected_columns = rf_names
+)
+```
+
+### Random Forest Variable Selection - Undersampled Training Dataset
+
+```{r}
+rf_nn_data_us <- prepare_nn_data(
+  training_data = train_under,
+  holdout_data = hold,
+  selected_columns = rf_names_us
+)
+```
+
+# **Neural Network Using Logistic Regression Variables**
+
+## *Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+nn_logistic_control <- caret::trainControl(
   method = "cv",
   number = 10,
   classProbs = TRUE,
-  summaryFunction = twoClassSummary,
+  summaryFunction = caret::twoClassSummary,
+  savePredictions = "final",
   allowParallel = TRUE
 )
-# set a tuning grid
-tuneGrid=expand.grid(
-  size = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
-  decay = seq(0.01, 0.15, by = 0.02)
+
+nn_logistic_grid <- expand.grid(
+  size = c(3, 5),
+  decay = c(0.05, 0.12)
 )
 ```
 
-**keras set up**
-```{r}
-
-
-```
-
-
-**Fit a Neural Network to the Logistic Variables**
-
-Here, we are fitting a neural network model on the variables that were determined to be nonzero using a regularized logistic regression via lasso selection. 
-
-*Select Variables*
-
-Since the variables were the same with the same corresponding coefficients for metric="F1" and metric="ROC", we decided to move forward with only one. 
+### Build Model
+____________________________________________________________________________________________________________
 
 ```{r}
-#nnet
-log_train_us <- train_ready %>%
-  select(any_of(logit_names), loan_default)
-log_train_us <- train_ready_us %>%
-  select(any_of(logit_names), loan_default) 
-log_test <- hold_ready %>%
-  select(any_of(logit_names), loan_default)
-log_test_us <- hold_ready %>%
-  select(any_of(logit_names_us), loan_default)
+set.seed(123)
 
-#keras
+nn_logistic <- caret::train(
+  loan_default ~ .,
+  data = log_nn_data$train,
+  method = "nnet",
+  metric = "ROC",
+  linout = FALSE,
+  tuneGrid = nn_logistic_grid,
+  trace = FALSE,
+  maxit = 100,
+  trControl = nn_logistic_control
+)
 ```
 
-*Fit the Model*
-
-We decided to fit our neural network using metric="F1". We saved the model object so we would not have to rerun the code chunk below to maximize efficiency and workflow. 
-
-```{r}
-# # If saved model object already, then load here 
-# nn_logistic = readRDS("nn_on_log.rds")
-# #Set Up Parallel Processing
-# cores=parallel::detectCores()
-# cl=parallel::makeCluster(10)
-# doParallel::registerDoParallel(cl)
-# 
-# # Fit the model
-# nn_logistic_us=train(
-#   loan_default ~ .,
-#   data = log_train_us,
-#   method = "nnet",
-#   metric = "F1",
-#   linout = FALSE,
-#   tuneGrid = tuneGrid,
-#   trace = FALSE,
-#   maxit = 100,
-#   trControl = trControl
-# )
-# 
-# # Stop Cluster
-# parallel::stopCluster(cl)
-# foreach::registerDoSEQ()
-# 
-# # Save nn object
-# saveRDS(nn_logistic_us, "nn_on_log_us.rds")
-nn_logistic <- readRDS("nn_on_log.rds")
-nn_logistic_us <- readRDS("nn_on_log_us.rds")
-```
-
-*View NNs*
-
-Taking a peak at what we just ran. First chunk is for imbalanced sample trained model. While, the second the chunk displays the balanced sample trained model. 
+### View Summary
+____________________________________________________________________________________________________________
 
 ```{r}
 nn_logistic
 ```
 
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+nn_logistic_prob <- predict(
+  object = nn_logistic,
+  newdata = log_nn_data$hold,
+  type = "prob"
+)
+```
+
+#### Predict Class
+
+```{r}
+nn_logistic_class <- predict(
+  object = nn_logistic,
+  newdata = log_nn_data$hold,
+  type = "raw"
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+nn_logistic_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("No", "Yes")),
+  predicted = factor(nn_logistic_class, levels = c("No", "Yes")),
+  probability_yes = as.numeric(nn_logistic_prob[, "Yes"])
+)
+```
+
+#### Preview Table
+
+```{r}
+head(nn_logistic_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+nn_logistic_metrics <- evaluate_classifier(
+  actual = nn_logistic_predictions$actual,
+  predicted = nn_logistic_predictions$predicted,
+  probability_yes = nn_logistic_predictions$probability_yes
+)
+
+nn_logistic_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+```{r}
+nn_logistic_results <- nn_logistic_metrics %>%
+  mutate(
+    model_type = "Neural Network",
+    variable_selection = "Lasso Logistic Regression",
+    sample = "Full",
+    train_control = "10-fold cross-validation",
+    size = nn_logistic$bestTune$size,
+    decay = nn_logistic$bestTune$decay
+  )
+
+saveRDS(nn_logistic, file.path(project_dir, "nn_logistic_model.rds"))
+saveRDS(nn_logistic_results, file.path(project_dir, "nn_logistic_results.rds"))
+```
+
+## *Undersampled Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+nn_logistic_us_control <- caret::trainControl(
+  method = "cv",
+  number = 10,
+  classProbs = TRUE,
+  summaryFunction = caret::twoClassSummary,
+  savePredictions = "final",
+  allowParallel = TRUE
+)
+
+nn_logistic_us_grid <- expand.grid(
+  size = c(3, 5),
+  decay = c(0.05, 0.12)
+)
+```
+
+### Build Model
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+
+nn_logistic_us <- caret::train(
+  loan_default ~ .,
+  data = log_nn_data_us$train,
+  method = "nnet",
+  metric = "ROC",
+  linout = FALSE,
+  tuneGrid = nn_logistic_us_grid,
+  trace = FALSE,
+  maxit = 100,
+  trControl = nn_logistic_us_control
+)
+```
+
+### View Summary
+____________________________________________________________________________________________________________
+
 ```{r}
 nn_logistic_us
 ```
 
-**Fit a Neural Network to the Random Forest Variables**
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
 
-Here, we are fitting a neural network based on the variables that were determined to be most important using the Random Forest model.
-
-*Select Variables*
-
-```{r}
-rf_train <- train_ready %>%
-  select(any_of(gini_gt_20), loan_default)
-rf_train_us <- train_ready_us %>%
-  select(any_of(gini_gt_20_us), loan_default)
-rf_test <- hold_ready %>%
-  select(any_of(gini_gt_20), loan_default)
-rf_test_us <- hold_ready %>%
-  select(any_of(gini_gt_20_us), loan_default)
-```
-
-*Fit the Model*
+#### Predict Probabilities
 
 ```{r}
-# Set Up Parallel Processing
-cores=parallel::detectCores()
-cl=parallel::makeCluster(10)
-doParallel::registerDoParallel(cl)
-
-# Fit Model Imbalanced Sample
-nn_rf=train(
-  loan_default ~ .,
-  data = rf_train,
-  method = "nnet",
-  metric = "F1",
-  linout = FALSE,
-  tuneGrid = tuneGrid,
-  trace = FALSE,
-  maxit = 100,
-  trControl = trControl
+nn_logistic_us_prob <- predict(
+  object = nn_logistic_us,
+  newdata = log_nn_data_us$hold,
+  type = "prob"
 )
-nn_rf
+```
 
-# Fit Model - Balanced Sample
-nn_rf_us=train(
-  loan_default ~ .,
-  data = rf_train_us,
-  method = "nnet",
-  metric = "F1",
-  linout = FALSE,
-  tuneGrid = tuneGrid,
-  trace = FALSE,
-  maxit = 100,
-  trControl = trControl
+#### Predict Class
+
+```{r}
+nn_logistic_us_class <- predict(
+  object = nn_logistic_us,
+  newdata = log_nn_data_us$hold,
+  type = "raw"
 )
-nn_rf_us
-
-# Stop Cluster
-parallel::stopCluster(cl)
-foreach::registerDoSEQ()
-
-# Save nn object
-saveRDS(nn_rf, "nn_on_rf.rds")
-saveRDS(nn_rf_us, "nn_on_rf_us.rds")
-nn_rf <- readRDS("nn_on_rf.rds")
-nn_rf_us <- readRDS("nn_on_rf_us.rds")
 ```
 
-*View NNs*
-
-Taking a peak at what we just ran. First chunk is for imbalanced sample trained model. While, the second the chunk displays the balanced sample trained model. 
+#### Tabulate Predictions
 
 ```{r}
-nn_rf
-```
-
-```{r}
-nn_rf_us
-```
-
-**Test Predictions**
-
-*Predict Probability*
-
-We decided to create a dataframe called 'pred.test' in which we will store the predicted probabilities, predicted classes, and actual classes. We used the head() function to confirm we were successfully able to store these values.
-
-```{r}
-nn.preds <- data.frame(
-
-  loan_default=hold_ready$loan_default,
-  
-  # logistic derived
-  im.log.probs=predict(nn_logistic,
-                       newdata = log_test, 
-                       type = "prob")[,1],
-  
-  bal.log.probs=predict(nn_logistic_us, 
-                        newdata = log_test_us, 
-                        type = "prob")[,1],
-  im.rf.probs=predict(nn_rf,
-                       newdata = rf_test, 
-                       type = "prob")[,1],
-  bal.rf.probs=predict(nn_rf_us, 
-                        newdata = rf_test_us, 
-                        type = "prob")[,1]
+nn_logistic_us_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("No", "Yes")),
+  predicted = factor(nn_logistic_us_class, levels = c("No", "Yes")),
+  probability_yes = as.numeric(nn_logistic_us_prob[, "Yes"])
 )
-head(nn.preds)
-```
-# Compare the Models
-**Create a ROCR Prediction Object**
-
-Here we are predicting on the models and creating ojects for ROC curves to be plotted in the subsequent chunk. 
-
-```{r}
-# Create prediction objects
-pred.im.log  <- prediction(nn.preds$im.log.probs,  nn.preds$loan_default)
-pred.bal.log <- prediction(nn.preds$bal.log.probs, nn.preds$loan_default)
-pred.im.rf   <- prediction(nn.preds$im.rf.probs,   nn.preds$loan_default)
-pred.bal.rf  <- prediction(nn.preds$bal.rf.probs,  nn.preds$loan_default)
-
-# ROC curve performance objects
-perf.nn_logistic    <- performance(pred.im.log,  "tpr", "fpr")
-perf.nn_logistic_us <- performance(pred.bal.log, "tpr", "fpr")
-perf.nn_rf          <- performance(pred.im.rf,   "tpr", "fpr")
-perf.nn_rf_us       <- performance(pred.bal.rf,  "tpr", "fpr")
-
-# AUC objects
-auc.nn_logistic    <- performance(pred.im.log,  "auc")@y.values[[1]]
-auc.nn_logistic_us <- performance(pred.bal.log, "auc")@y.values[[1]]
-auc.nn_rf          <- performance(pred.im.rf,   "auc")@y.values[[1]]
-auc.nn_rf_us       <- performance(pred.bal.rf,  "auc")@y.values[[1]]
 ```
 
-**Plot the ROC Curves**
-
-The aforementioned plot of mutliple ROC curves with corresponding AUC values listed in the legend. There was three models that were within 0.001 each other in terms of AUC. However, because, as I have frustratingly learned the hard way, AUC is not related to F1. Therefore, we will carry out these three till the end and make a conclusion then on which neural network model is preferred. 
+#### Preview Table
 
 ```{r}
-plot(perf.nn_logistic, col="red", lwd=2, main="ROC Curves")
-plot(perf.nn_rf, col="green", lwd=2, add=TRUE)
-plot(perf.nn_logistic_us, col="blue", lwd=2, add=TRUE)
-plot(perf.nn_rf_us, col="violet", lwd=2, add=TRUE)
-abline(a=0, b=1, col="gray", lty=2)
-legend("bottomright", 
-       legend = c(
-         paste0("NN-Logistic (AUC=", round(auc.nn_logistic, 3), ")"),
-         paste0("NN-Logistic-US (AUC=", round(auc.nn_logistic_us, 3), ")"),
-         paste0("NN-RF (AUC=", round(auc.nn_rf, 3), ")"),
-         paste0("NN-RF-US (AUC=", round(auc.nn_rf_us, 3), ")")
-       ),
-       col = c("red", "green", "blue", "violet"), 
-       lwd = 2)
-
-```
-**Model Performance Based on F1 Score**
-
-Here, we acquire the best threshold based off of F1 score. 
-
-
-*NN Log US Model*
-```{r}
-prec_nn_logistic=performance(pred.bal.log,"prec")
-rec_nn_logistic=performance(pred.bal.log,"rec")
-precision=prec_nn_logistic@y.values[[1]]
-recall=rec_nn_logistic@y.values[[1]]
-# Calculate F1 scores
-f1_scores=(2*precision*recall)/(precision+recall)
-f1_scores[is.na(f1_scores)] = 0
-
-# Find the index of the maximum F1 score
-max_f1_index=which.max(f1_scores)
-best_f1=f1_scores[max_f1_index]
-best_thresh=prec_nn_logistic@x.values[[1]][max_f1_index]
-
-# Print the best threshold and F1 score
-cat("Best Threshold:", round(best_thresh, 3))
-cat(" Best F1 Score:", round(best_f1,3))
-```
-*NN RF Model*
-
-```{r}
-prec_nn_rf=performance(pred.im.rf,"prec")
-rec_nn_rf=performance(pred.im.rf,"rec")
-precision_rf=prec_nn_rf@y.values[[1]]
-recall_rf=rec_nn_rf@y.values[[1]]
-# Calculate F1 scores
-f1_scores_rf=(2*precision_rf*recall_rf)/(precision_rf+recall_rf)
-f1_scores_rf[is.na(f1_scores_rf)] = 0
-
-# Find the index of the maximum F1 score
-max_f1_index_rf=which.max(f1_scores_rf)
-best_f1_rf=f1_scores_rf[max_f1_index_rf]
-best_thresh_rf=prec_nn_rf@x.values[[1]][max_f1_index_rf]
-
-# Print the best threshold and F1 score
-cat("Best Threshold:", round(best_thresh_rf, 3))
-cat(" Best F1 Score:", round(best_f1_rf,3))
-```
-*NN RF US Model*
-
-```{r}
-prec_nn_rfu=performance(pred.bal.rf,"prec")
-rec_nn_rfu=performance(pred.bal.rf,"rec")
-precision_rfu=prec_nn_rfu@y.values[[1]]
-recall_rfu=rec_nn_rfu@y.values[[1]]
-# Calculate F1 scores
-f1_scores_rfu=(2*precision_rfu*recall_rfu)/(precision_rfu+recall_rfu)
-f1_scores_rfu[is.na(f1_scores_rfu)] = 0
-
-# Find the index of the maximum F1 score
-max_f1_index_rfu=which.max(f1_scores_rfu)
-best_f1_rfu=f1_scores_rfu[max_f1_index_rfu]
-best_thresh_rfu=prec_nn_rfu@x.values[[1]][max_f1_index_rfu]
-
-# Print the best threshold and F1 score
-cat("Best Threshold:", round(best_thresh_rfu, 3))
-cat(" Best F1 Score:", round(best_f1_rfu,3))
-```
-**Plotting F1 Score Against Threshold**
-
-*NN Log US Model*
-
-```{r}
-plot(prec_nn_logistic@x.values[[1]], f1_scores, type = "l",
-     xlab = "Threshold", ylab = "F1 Score",
-     main = "F1 Score vs. Classification Threshold")
-abline(v = best_thresh, col = "red", lty = 2)
-```
-*NN RF Model*
-
-```{r}
-plot(prec_nn_rf@x.values[[1]], f1_scores, type = "l",
-     xlab = "Threshold", ylab = "F1 Score",
-     main = "F1 Score vs. Classification Threshold")
-abline(v = best_thresh_rf, col = "red", lty = 2)
-```
-*NN RF US Model*
-
-```{r}
-plot(prec_nn_rfu@x.values[[1]], f1_scores, type = "l",
-     xlab = "Threshold", ylab = "F1 Score",
-     main = "F1 Score vs. Classification Threshold")
-abline(v = best_thresh_rfu, col = "red", lty = 2)
+head(nn_logistic_us_predictions)
 ```
 
-**Confusion Matrix**
-
-Below, there are confusion matrices created from the three models under consideration. 
-
-*Use Best F1 Threshold to Classify*
+### Evaluate
+____________________________________________________________________________________________________________
 
 ```{r}
-nn.preds <- nn.preds %>%
+nn_logistic_us_metrics <- evaluate_classifier(
+  actual = nn_logistic_us_predictions$actual,
+  predicted = nn_logistic_us_predictions$predicted,
+  probability_yes = nn_logistic_us_predictions$probability_yes
+)
+
+nn_logistic_us_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+```{r}
+nn_logistic_us_results <- nn_logistic_us_metrics %>%
   mutate(
-    
-  # im.log.test= ifelse(nn.preds$im.log.probs > best_thresh, "Yes", "No") %>%
-  #   factor(levels = c("Yes","No")),
-  
-  bal.log.test=ifelse(nn.preds$bal.log.probs > best_thresh, "Yes", "No") %>%
-    factor(levels = c("Yes","No")),
-  
-  im.rf.test=ifelse(nn.preds$im.rf.probs > best_thresh_rf, "Yes", "No") %>%
-    factor(levels = c("Yes","No")),
-  
-  bal.rf.test=ifelse(nn.preds$bal.rf.probs > best_thresh_rfu, "Yes", "No") %>%
-    factor(levels = c("Yes","No"))
+    model_type = "Neural Network",
+    variable_selection = "Lasso Logistic Regression",
+    sample = "Undersampled",
+    train_control = "10-fold cross-validation",
+    size = nn_logistic_us$bestTune$size,
+    decay = nn_logistic_us$bestTune$decay
+  )
+
+saveRDS(nn_logistic_us, file.path(project_dir, "nn_logistic_us_model.rds"))
+saveRDS(nn_logistic_us_results, file.path(project_dir, "nn_logistic_us_results.rds"))
+```
+
+# **Neural Network Using Random Forest Variables**
+
+## *Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+nn_rf_control <- caret::trainControl(
+  method = "cv",
+  number = 10,
+  classProbs = TRUE,
+  summaryFunction = caret::twoClassSummary,
+  savePredictions = "final",
+  allowParallel = TRUE
+)
+
+nn_rf_grid <- expand.grid(
+  size = c(3, 5),
+  decay = c(0.05, 0.12)
 )
 ```
 
-*Create Confusion Matrices*
+### Build Model
+____________________________________________________________________________________________________________
 
 ```{r}
-confusionMatrix(nn.preds$bal.log.test, 
-                nn.preds$loan_default,
-                positive="Yes")
+set.seed(123)
+
+nn_rf <- caret::train(
+  loan_default ~ .,
+  data = rf_nn_data$train,
+  method = "nnet",
+  metric = "ROC",
+  linout = FALSE,
+  tuneGrid = nn_rf_grid,
+  trace = FALSE,
+  maxit = 100,
+  trControl = nn_rf_control
+)
 ```
+
+### View Summary
+____________________________________________________________________________________________________________
 
 ```{r}
-confusionMatrix(nn.preds$im.rf.test, 
-                nn.preds$loan_default,
-                positive="Yes")
+nn_rf
 ```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
 
 ```{r}
-confusionMatrix(nn.preds$bal.rf.test, 
-                nn.preds$loan_default,
-                positive="Yes")
+nn_rf_prob <- predict(
+  object = nn_rf,
+  newdata = rf_nn_data$hold,
+  type = "prob"
+)
 ```
 
-# Save Objects
-
-**Prediction DataFrame**
+#### Predict Class
 
 ```{r}
-saveRDS(nn.preds, "nn.preds_raw.rds")
+nn_rf_class <- predict(
+  object = nn_rf,
+  newdata = rf_nn_data$hold,
+  type = "raw"
+)
 ```
 
-**Model Objects**
+#### Tabulate Predictions
 
-*Are saved immediately after running the corresponding code.
-
-**Prepped Recipe**
 ```{r}
-saveRDS(prep,"recipes_bake_clean_0.rds")
+nn_rf_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("No", "Yes")),
+  predicted = factor(nn_rf_class, levels = c("No", "Yes")),
+  probability_yes = as.numeric(nn_rf_prob[, "Yes"])
+)
 ```
 
-#Conclusion
+#### Preview Table
 
-**Logistic Models**
+```{r}
+head(nn_rf_predictions)
+```
 
-The undersampled and original datasets showed similar F1 scores. However, the sensitivity for the model trained using the original dataset. Thus, the better dataset would be considered to be that trained with the whole dataset because sensitivity reflects the ability of the model to capture the positive class, which in this case is significantly more influential than capturing the negative class. 
+### Evaluate
+____________________________________________________________________________________________________________
 
-**Neural Network Models**
+```{r}
+nn_rf_metrics <- evaluate_classifier(
+  actual = nn_rf_predictions$actual,
+  predicted = nn_rf_predictions$predicted,
+  probability_yes = nn_rf_predictions$probability_yes
+)
 
-In predicting loan default, the capturing of "Yes" or a the positive class is much more significant in terms of profit loss compard to the alternative. Thus, the parameter with the highest capturing of "Yes" correctly identified would represent the best model for real-world laon default analysis. In this case, the optimal model for real-world application is the neural network trained on an unbalanced sample using the most important variables extracted from a random forest ensemble. 
+nn_rf_metrics
+```
 
-For this competition, the best model is determined by the highest F1 Score. There happened to be a tie for the highest F1 score. Those models that tied were the models trained using a balanced dataset (F1 Scores = 0.435).  
+### Store & Export
+____________________________________________________________________________________________________________
+
+```{r}
+nn_rf_results <- nn_rf_metrics %>%
+  mutate(
+    model_type = "Neural Network",
+    variable_selection = "Random Forest Importance",
+    sample = "Full",
+    train_control = "10-fold cross-validation",
+    size = nn_rf$bestTune$size,
+    decay = nn_rf$bestTune$decay
+  )
+
+saveRDS(nn_rf, file.path(project_dir, "nn_rf_model.rds"))
+saveRDS(nn_rf_results, file.path(project_dir, "nn_rf_results.rds"))
+```
+
+## *Undersampled Training Dataset*
+
+### Set Parameters
+____________________________________________________________________________________________________________
+
+```{r}
+nn_rf_us_control <- caret::trainControl(
+  method = "cv",
+  number = 10,
+  classProbs = TRUE,
+  summaryFunction = caret::twoClassSummary,
+  savePredictions = "final",
+  allowParallel = TRUE
+)
+
+nn_rf_us_grid <- expand.grid(
+  size = c(3, 5),
+  decay = c(0.05, 0.12)
+)
+```
+
+### Build Model
+____________________________________________________________________________________________________________
+
+```{r}
+set.seed(123)
+
+nn_rf_us <- caret::train(
+  loan_default ~ .,
+  data = rf_nn_data_us$train,
+  method = "nnet",
+  metric = "ROC",
+  linout = FALSE,
+  tuneGrid = nn_rf_us_grid,
+  trace = FALSE,
+  maxit = 100,
+  trControl = nn_rf_us_control
+)
+```
+
+### View Summary
+____________________________________________________________________________________________________________
+
+```{r}
+nn_rf_us
+```
+
+### Predict on Holdout Dataset
+____________________________________________________________________________________________________________
+
+#### Predict Probabilities
+
+```{r}
+nn_rf_us_prob <- predict(
+  object = nn_rf_us,
+  newdata = rf_nn_data_us$hold,
+  type = "prob"
+)
+```
+
+#### Predict Class
+
+```{r}
+nn_rf_us_class <- predict(
+  object = nn_rf_us,
+  newdata = rf_nn_data_us$hold,
+  type = "raw"
+)
+```
+
+#### Tabulate Predictions
+
+```{r}
+nn_rf_us_predictions <- tibble::tibble(
+  actual = factor(hold$loan_default, levels = c("No", "Yes")),
+  predicted = factor(nn_rf_us_class, levels = c("No", "Yes")),
+  probability_yes = as.numeric(nn_rf_us_prob[, "Yes"])
+)
+```
+
+#### Preview Table
+
+```{r}
+head(nn_rf_us_predictions)
+```
+
+### Evaluate
+____________________________________________________________________________________________________________
+
+```{r}
+nn_rf_us_metrics <- evaluate_classifier(
+  actual = nn_rf_us_predictions$actual,
+  predicted = nn_rf_us_predictions$predicted,
+  probability_yes = nn_rf_us_predictions$probability_yes
+)
+
+nn_rf_us_metrics
+```
+
+### Store & Export
+____________________________________________________________________________________________________________
+
+```{r}
+nn_rf_us_results <- nn_rf_us_metrics %>%
+  mutate(
+    model_type = "Neural Network",
+    variable_selection = "Random Forest Importance",
+    sample = "Undersampled",
+    train_control = "10-fold cross-validation",
+    size = nn_rf_us$bestTune$size,
+    decay = nn_rf_us$bestTune$decay
+  )
+
+saveRDS(nn_rf_us, file.path(project_dir, "nn_rf_us_model.rds"))
+saveRDS(nn_rf_us_results, file.path(project_dir, "nn_rf_us_results.rds"))
+```
+
+# **Neural Network Model Comparison**
+
+```{r}
+nn_results <- bind_rows(
+  nn_logistic_results,
+  nn_logistic_us_results,
+  nn_rf_results,
+  nn_rf_us_results
+) %>%
+  arrange(desc(f1_score))
+
+nn_results %>%
+  knitr::kable(
+    digits = 3,
+    caption = "Neural network model comparison ordered by F1 score."
+  )
+```
+
+# **Save Final Neural Network Results**
+
+```{r}
+saveRDS(nn_results, file.path(project_dir, "nn_results.rds"))
+```
