@@ -1,0 +1,47 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "MomentumProdigy",
+  "version": "1.0.0",
+  "identifier": "com.momentumprodigy.learn",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "MomentumProdigy — Analytics Mastery",
+        "width": 1320,
+        "height": 860,
+        "minWidth": 960,
+        "minHeight": 640,
+        "resizable": true,
+        "decorations": true,
+        "transparent": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "publisher": "MomentumProdigy Learning",
+    "category": "Education",
+    "shortDescription": "Offline analytics mastery course with spaced repetition, search, and an AI tutor.",
+    "longDescription": "MomentumProdigy is a polished offline desktop study system for analytics mastery. It bundles a generated curriculum, adaptive review scheduling, semantic search, voice controls, and a local-first tutor experience into a native installer.",
+    "copyright": "Copyright (c) 2026 MomentumProdigy Learning",
+    "targets": ["msi", "nsis", "dmg", "app"],
+    "icon": ["icons/icon.ico", "icons/icon.icns", "icons/128x128.png"],
+    "resources": ["../../backend/models/*"],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "startMenuFolder": "MomentumProdigy Learning",
+        "installerHooks": "scripts/windows-installer-hooks.nsh"
+      }
+    }
+  }
+}

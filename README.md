@@ -25,6 +25,7 @@ The portfolio is organized by project area first, then by individual project. Ea
 | Big Data and Data Mining | Big Data | APIs, MongoDB aggregation, NLP, sentiment analysis, TF-IDF, classification | [`big_data`](big_data) |
 | NFL Expansion Optimization | Optimization | Binary integer programming, coverage modeling, threshold sensitivity analysis | [`optimization`](optimization) |
 | ChemPulse | Software Products | Local-first chemical intelligence, Python backend, Reflex frontend, DuckDB-style data access, chemistry services, synthetic data generation, desktop packaging | [`software_products/chempulse`](software_products/chempulse) |
+| MomentumProdigy | Software Products | Offline-first mastery learning, React/TypeScript frontend, content pipeline, spaced-repetition scheduler, local search/tutor behavior, Tauri and Capacitor packaging | [`software_products/momentum_prodigy`](software_products/momentum_prodigy) |
 
 ## Tools and Languages
 
@@ -32,7 +33,7 @@ The portfolio is organized by project area first, then by individual project. Ea
 - R, R Markdown, tidyverse, caret, rpart, randomForest, xgboost, neural network tooling
 - MongoDB and API-based data collection
 - Gurobi optimization and integer programming
-- Reflex, FastAPI/ASGI-style services, DuckDB-style local data workflows, and desktop packaging scripts
+- Reflex, FastAPI/ASGI-style services, DuckDB-style local data workflows, React/TypeScript, Vite, Tauri, Capacitor, and desktop/mobile packaging scripts
 - Model evaluation metrics including accuracy, precision, recall, F1 score, AUC, RMSE, reconstruction error, and sensitivity analysis
 
 ## Data Availability
@@ -49,6 +50,7 @@ Each project README explains what is included, what data is required to rerun th
 4. Review [`big_data`](big_data) for data acquisition, database, and text mining workflows.
 5. Review [`optimization`](optimization) for mathematical modeling and decision optimization.
 6. Review [`software_products/chempulse`](software_products/chempulse) for a domain-specific scientific software product with backend, frontend, testing, synthetic data, and packaging components.
+7. Review [`software_products/momentum_prodigy`](software_products/momentum_prodigy) for an offline-first learning product with a content-generation pipeline, tested learning engine, searchable course bundle, and desktop/mobile app paths.
 
 ## Repository Structure
 
@@ -64,5 +66,6 @@ Each project README explains what is included, what data is required to rerun th
 |   `-- tariff_prediction
 |-- optimization
 `-- software_products
-    `-- chempulse
+    |-- chempulse
+    `-- momentum_prodigy
 ```

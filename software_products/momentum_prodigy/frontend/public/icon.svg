@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="MomentumProdigy">
+  <defs>
+    <radialGradient id="core" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#7df9ff"/>
+      <stop offset="45%" stop-color="#19b8e0"/>
+      <stop offset="100%" stop-color="#071826"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="#04101c"/>
+  <circle cx="64" cy="64" r="38" fill="url(#core)" filter="url(#glow)"/>
+  <path d="M64 22 93 74 64 106 35 74Z" fill="none" stroke="#9be8f7" stroke-width="5" stroke-linejoin="round"/>
+  <circle cx="64" cy="64" r="11" fill="#04101c" stroke="#7df9ff" stroke-width="4"/>
+</svg>

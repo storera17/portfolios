@@ -1,0 +1,1819 @@
+{
+  "meta": {
+    "name": "MomentumProdigy Coding Worksheets",
+    "generatedAt": "2026-07-14T19:43:08.470Z",
+    "counts": {
+      "worksheets": 20,
+      "chunks": 80,
+      "languages": 4
+    }
+  },
+  "worksheets": [
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa512-dax-filter-context",
+      "title": "DAX Filter Context and Safe Measures",
+      "language": "dax",
+      "difficulty": 2,
+      "topics": [
+        "Power BI",
+        "DAX",
+        "filter context",
+        "CALCULATE",
+        "ALLSELECTED"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 512/ISA 512/Module 1 - Data Preparation using DAX Query Language/M1.3 Table Functions in DAX/03 Ignore filters.pbix",
+        "Classes /Fall 2025/ISA 512/ISA 512/Module 1 - Data Preparation using DAX Query Language/M1.3 Table Functions in DAX/07b ALLSELECTED.pbix",
+        "Classes /Fall 2025/ISA 512/ISA 512/Module 1 - Data Preparation using DAX Query Language/M1.4 Evaluation Contexts/1.4.b row and filter contexts (demo).pbix"
+      ],
+      "chunks": [
+        {
+          "id": "dax-filter-01",
+          "title": "Create the base revenue measure",
+          "prompt": "Write a reusable measure named Total Revenue that sums Sales[Revenue].",
+          "imports": [],
+          "starterCode": "",
+          "solution": "Total Revenue = SUM(Sales[Revenue])",
+          "hints": [
+            "Measures should aggregate columns.",
+            "Use SUM around the numeric revenue column."
+          ],
+          "checks": []
+        },
+        {
+          "id": "dax-filter-02",
+          "title": "Ignore product filters",
+          "prompt": "Create Revenue All Products by recalculating Total Revenue while removing filters from Product.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "Revenue All Products = CALCULATE([Total Revenue], ALL(Product))",
+          "hints": [
+            "CALCULATE changes filter context.",
+            "ALL(Product) removes filters from the Product table."
+          ],
+          "checks": []
+        },
+        {
+          "id": "dax-filter-03",
+          "title": "Respect report selections",
+          "prompt": "Create Revenue Selected Products so the denominator respects slicers but ignores the current visual row.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "Revenue Selected Products = CALCULATE([Total Revenue], ALLSELECTED(Product))",
+          "hints": [
+            "ALLSELECTED keeps outer report selections.",
+            "This is useful for visual percentages."
+          ],
+          "checks": []
+        },
+        {
+          "id": "dax-filter-04",
+          "title": "Compute share of selected revenue",
+          "prompt": "Create Product Revenue Share using DIVIDE so blank or zero denominators do not break the report.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "Product Revenue Share = DIVIDE([Total Revenue], [Revenue Selected Products])",
+          "hints": [
+            "DIVIDE is safer than /.",
+            "Use the selected-products denominator from the previous chunk."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa512-star-schema-date-modeling",
+      "title": "Star Schema and Date Relationships",
+      "language": "dax",
+      "difficulty": 3,
+      "topics": [
+        "Power BI",
+        "star schema",
+        "date table",
+        "USERELATIONSHIP",
+        "grain"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 512/ISA 512/Module 2 - Data Modeling using Power BI/M2.3 Building a Star Scheme/2.3.b - header and detail (begin).pbix",
+        "Classes /Fall 2025/ISA 512/ISA 512/Module 2 - Data Modeling using Power BI/M2.4 Working with Time and Date/2.4.c - Multiple relationship with date.pbix",
+        "Literature to Know/DB, BI, & Analytics/The Data Warehouse Toolkit - Kimball.pdf"
+      ],
+      "chunks": [
+        {
+          "id": "dax-star-01",
+          "title": "Declare an order-date sales measure",
+          "prompt": "Write Total Sales using the active OrderDate relationship.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "Total Sales = SUM(Sales[SalesAmount])",
+          "hints": [
+            "The active relationship handles OrderDate automatically.",
+            "Start with the simplest measure."
+          ],
+          "checks": []
+        },
+        {
+          "id": "dax-star-02",
+          "title": "Activate the ship-date relationship",
+          "prompt": "Write Sales by Ship Date using USERELATIONSHIP between Date[Date] and Sales[ShipDate].",
+          "imports": [],
+          "starterCode": "",
+          "solution": "Sales by Ship Date = CALCULATE([Total Sales], USERELATIONSHIP(Date[Date], Sales[ShipDate]))",
+          "hints": [
+            "USERELATIONSHIP is used inside CALCULATE.",
+            "The inactive relationship is temporarily activated for this measure."
+          ],
+          "checks": []
+        },
+        {
+          "id": "dax-star-03",
+          "title": "Create a distinct customer count",
+          "prompt": "Write a measure that counts unique customers at the fact-table grain.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "Customers = DISTINCTCOUNT(Sales[CustomerKey])",
+          "hints": [
+            "Use DISTINCTCOUNT for unique customer keys.",
+            "Do not count rows unless each row is exactly one customer."
+          ],
+          "checks": []
+        },
+        {
+          "id": "dax-star-04",
+          "title": "Calculate revenue per customer",
+          "prompt": "Write Revenue per Customer using your Total Sales and Customers measures.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "Revenue per Customer = DIVIDE([Total Sales], [Customers])",
+          "hints": [
+            "Use DIVIDE for safe ratios.",
+            "Measures can reuse other measures."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa514-python-pandas-cleaning",
+      "title": "Python Data Cleaning with pandas",
+      "language": "python",
+      "difficulty": 1,
+      "topics": [
+        "Python",
+        "pandas",
+        "data cleaning",
+        "groupby"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 514/Module 2 - Python/Module 2 - Python (I)/Tutorial01_PythonBasics.ipynb",
+        "Classes /Fall 2025/ISA 514/Module 3 - Python (II)/isa514-m03_eg1.ipynb",
+        "Classes /Fall 2025/ISA 514/Homework Assignments/Homework 1/FDIC-1.ipynb"
+      ],
+      "chunks": [
+        {
+          "id": "py-clean-01",
+          "title": "Import pandas and create a dataframe",
+          "prompt": "Import pandas as pd and create a dataframe named orders from the provided dictionary.",
+          "imports": [
+            "import pandas as pd"
+          ],
+          "starterCode": "raw_orders = {\"order_id\": [1, 2, 3], \"segment\": [\"A\", \"B\", \"A\"], \"revenue\": [120, None, 440]}",
+          "solution": "import pandas as pd\norders = pd.DataFrame(raw_orders)",
+          "hints": [
+            "pd.DataFrame(...) creates a dataframe.",
+            "Keep the dataframe name orders."
+          ],
+          "checks": []
+        },
+        {
+          "id": "py-clean-02",
+          "title": "Fill missing revenue",
+          "prompt": "Replace missing revenue values with 0 and store the result back in orders[\"revenue\"].",
+          "imports": [],
+          "starterCode": "",
+          "solution": "orders[\"revenue\"] = orders[\"revenue\"].fillna(0)",
+          "hints": [
+            "Use fillna(0).",
+            "Assign the cleaned column back to the same column name."
+          ],
+          "checks": []
+        },
+        {
+          "id": "py-clean-03",
+          "title": "Create a high-value flag",
+          "prompt": "Add a boolean column named high_value that is True when revenue is at least 300.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "orders[\"high_value\"] = orders[\"revenue\"] >= 300",
+          "hints": [
+            "A comparison creates True/False values.",
+            "Use >= 300."
+          ],
+          "checks": []
+        },
+        {
+          "id": "py-clean-04",
+          "title": "Summarize revenue by segment",
+          "prompt": "Create segment_summary with total revenue and order count by segment.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "segment_summary = orders.groupby(\"segment\").agg(total_revenue=(\"revenue\", \"sum\"), order_count=(\"order_id\", \"count\")).reset_index()",
+          "hints": [
+            "Use groupby(\"segment\").",
+            "Named aggregations make the output readable."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa514-sql-flights-joins",
+      "title": "SQL Joins and Aggregation for Flight Data",
+      "language": "sql",
+      "difficulty": 2,
+      "topics": [
+        "SQL",
+        "joins",
+        "aggregation",
+        "flight data"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 514/Module 3 - Python (II)/CreateTables.ddl",
+        "Classes /Fall 2025/ISA 514/Module 3 - Python (II)/airline_data.sql",
+        "Classes /Fall 2025/ISA 514/Module 3 - Python (II)/flights_data.sql"
+      ],
+      "chunks": [
+        {
+          "id": "sql-flight-01",
+          "title": "Select the flight grain",
+          "prompt": "Write a query that returns flight_id, carrier, origin, destination, and arrival_delay from flights.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "SELECT flight_id, carrier, origin, destination, arrival_delay\nFROM flights;",
+          "hints": [
+            "Start by naming the columns you need.",
+            "The base table is flights."
+          ],
+          "checks": []
+        },
+        {
+          "id": "sql-flight-02",
+          "title": "Filter delayed flights",
+          "prompt": "Return only flights with arrival_delay greater than 15 minutes.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "SELECT flight_id, carrier, origin, destination, arrival_delay\nFROM flights\nWHERE arrival_delay > 15;",
+          "hints": [
+            "Use WHERE for row filters.",
+            "The threshold is 15."
+          ],
+          "checks": []
+        },
+        {
+          "id": "sql-flight-03",
+          "title": "Join airline names",
+          "prompt": "Join flights to airlines so the output includes airline_name.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "SELECT f.flight_id, a.airline_name, f.origin, f.destination, f.arrival_delay\nFROM flights AS f\nJOIN airlines AS a\n  ON f.carrier = a.carrier;",
+          "hints": [
+            "Use table aliases for readability.",
+            "Join on the shared carrier code."
+          ],
+          "checks": []
+        },
+        {
+          "id": "sql-flight-04",
+          "title": "Average delay by airline",
+          "prompt": "Calculate average arrival delay and flight count by airline_name, sorted from highest delay to lowest.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "SELECT a.airline_name,\n       AVG(f.arrival_delay) AS avg_arrival_delay,\n       COUNT(*) AS flight_count\nFROM flights AS f\nJOIN airlines AS a\n  ON f.carrier = a.carrier\nGROUP BY a.airline_name\nORDER BY avg_arrival_delay DESC;",
+          "hints": [
+            "Aggregated columns need GROUP BY.",
+            "ORDER BY can use the alias."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa514-text-mining-tfidf",
+      "title": "Text Mining Pipeline with TF-IDF",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "text mining",
+        "TF-IDF",
+        "classification",
+        "scikit-learn"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 514/Module 7 - Text Mining/Exercises and Presentations/isa514-m07_demo1.ipynb",
+        "Classes /Fall 2025/ISA 514/Module 7 - Text Mining/Exercises and Presentations/isa514-m07_ex1.ipynb",
+        "Classes /Fall 2025/ISA 514/Module 7 - Text Mining/spam.ipynb"
+      ],
+      "chunks": [
+        {
+          "id": "text-01",
+          "title": "Import the text-mining tools",
+          "prompt": "Import train_test_split, TfidfVectorizer, LogisticRegression, and accuracy_score.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "from sklearn.model_selection import train_test_split\nfrom sklearn.feature_extraction.text import TfidfVectorizer\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.metrics import accuracy_score",
+          "hints": [
+            "TF-IDF lives in sklearn.feature_extraction.text.",
+            "Logistic regression is a solid baseline classifier."
+          ],
+          "checks": []
+        },
+        {
+          "id": "text-02",
+          "title": "Split text and labels",
+          "prompt": "Split df[\"text\"] and df[\"label\"] into train/test sets with test_size=.25 and random_state=42.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "X_train, X_test, y_train, y_test = train_test_split(df[\"text\"], df[\"label\"], test_size=0.25, random_state=42)",
+          "hints": [
+            "Use train_test_split once.",
+            "Keep names X_train, X_test, y_train, y_test."
+          ],
+          "checks": []
+        },
+        {
+          "id": "text-03",
+          "title": "Vectorize the documents",
+          "prompt": "Fit a TfidfVectorizer on the training text and transform both training and test text.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "vectorizer = TfidfVectorizer(stop_words=\"english\", min_df=2)\nX_train_vec = vectorizer.fit_transform(X_train)\nX_test_vec = vectorizer.transform(X_test)",
+          "hints": [
+            "Fit only on training text.",
+            "Transform the test text with the fitted vectorizer."
+          ],
+          "checks": []
+        },
+        {
+          "id": "text-04",
+          "title": "Train and evaluate a classifier",
+          "prompt": "Train LogisticRegression and calculate accuracy on the test set.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "model = LogisticRegression(max_iter=1000)\nmodel.fit(X_train_vec, y_train)\npreds = model.predict(X_test_vec)\naccuracy = accuracy_score(y_test, preds)",
+          "hints": [
+            "Call fit before predict.",
+            "Compare predictions to y_test."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa591-tidyverse-eda",
+      "title": "Tidyverse EDA and Feature Checks",
+      "language": "r",
+      "difficulty": 1,
+      "topics": [
+        "R",
+        "tidyverse",
+        "EDA",
+        "feature checks"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 591/Module 0 - Pre-Term Review Material/Module 0/Intro-to-Tidyverse.html",
+        "Classes /Fall 2025/ISA 591/Module 2 - Exploratory Data Analysis/Module 2/Module-2-Day-1-Notes-Final.html",
+        "Literature to Know/DB, BI, & Analytics/ML/ISA591 Textbook.docx"
+      ],
+      "chunks": [
+        {
+          "id": "r-eda-01",
+          "title": "Load tidyverse",
+          "prompt": "Load tidyverse so dplyr and ggplot2 verbs are available.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "library(tidyverse)",
+          "hints": [
+            "library(...) loads an R package.",
+            "tidyverse includes dplyr and ggplot2."
+          ],
+          "checks": []
+        },
+        {
+          "id": "r-eda-02",
+          "title": "Select modeling columns",
+          "prompt": "Create model_df with only target, age, income, tenure, and channel.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "model_df <- raw_df %>%\n  select(target, age, income, tenure, channel)",
+          "hints": [
+            "Use select().",
+            "Keep target in the dataframe."
+          ],
+          "checks": []
+        },
+        {
+          "id": "r-eda-03",
+          "title": "Summarize numeric predictors",
+          "prompt": "Group by target and calculate average income and average tenure.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "summary_df <- model_df %>%\n  group_by(target) %>%\n  summarize(avg_income = mean(income, na.rm = TRUE), avg_tenure = mean(tenure, na.rm = TRUE), .groups = \"drop\")",
+          "hints": [
+            "Use group_by(target).",
+            "Use na.rm = TRUE for missing values."
+          ],
+          "checks": []
+        },
+        {
+          "id": "r-eda-04",
+          "title": "Plot target by channel",
+          "prompt": "Create a bar chart showing target counts by channel.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "ggplot(model_df, aes(x = channel, fill = target)) +\n  geom_bar(position = \"dodge\") +\n  labs(x = \"Channel\", y = \"Count\", fill = \"Target\")",
+          "hints": [
+            "geom_bar() counts rows.",
+            "fill = target separates the classes."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa591-tree-model-baseline",
+      "title": "Decision Tree Baseline in R",
+      "language": "r",
+      "difficulty": 2,
+      "topics": [
+        "R",
+        "decision tree",
+        "classification",
+        "confusion matrix"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 591/Module 6 - Tree-Based Models/Module 6 - Lab 1/Module 6 Lab 1 Customer Churn.Rmd",
+        "Classes /Fall 2025/ISA 591/Final projectr/Part 2 - Tree 1 - Decision Tree.Rmd",
+        "Classes /Fall 2025/ISA 591/Module 4 - Evaluating Model Performance/Module 4 Notes-Day 1.Rmd"
+      ],
+      "chunks": [
+        {
+          "id": "r-tree-01",
+          "title": "Load modeling packages",
+          "prompt": "Load rpart, rpart.plot, and caret.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "library(rpart)\nlibrary(rpart.plot)\nlibrary(caret)",
+          "hints": [
+            "rpart trains decision trees.",
+            "caret provides confusionMatrix()."
+          ],
+          "checks": []
+        },
+        {
+          "id": "r-tree-02",
+          "title": "Train the decision tree",
+          "prompt": "Train a classification tree predicting churn from all other fields in train_df.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "tree_model <- rpart(churn ~ ., data = train_df, method = \"class\")",
+          "hints": [
+            "The formula churn ~ . means use all other columns.",
+            "method = \"class\" is for classification."
+          ],
+          "checks": []
+        },
+        {
+          "id": "r-tree-03",
+          "title": "Predict classes",
+          "prompt": "Predict classes for test_df and store them in tree_preds.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "tree_preds <- predict(tree_model, newdata = test_df, type = \"class\")",
+          "hints": [
+            "Use newdata = test_df.",
+            "type = \"class\" returns class labels."
+          ],
+          "checks": []
+        },
+        {
+          "id": "r-tree-04",
+          "title": "Evaluate the baseline",
+          "prompt": "Create a confusion matrix comparing tree_preds to test_df$churn.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "tree_cm <- confusionMatrix(tree_preds, test_df$churn)",
+          "hints": [
+            "Predictions go first in confusionMatrix().",
+            "The truth column is test_df$churn."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa616-reproducible-analysis-plan",
+      "title": "Reproducible Analytics Project Skeleton",
+      "language": "r",
+      "difficulty": 2,
+      "topics": [
+        "reproducibility",
+        "analytics workflow",
+        "R project structure"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 616/Module 2 - Reproducible Data Science - Analytics Workflow/Module 2 - Week 6/Day 1/Reproducible Data Science-Part 1-1.pdf",
+        "Classes /Fall 2025/ISA 616/Module 2 - Reproducible Data Science - Analytics Workflow/Module 2 - Week 6/Day 1/Roger Peng Article - Reproducible Research.pdf",
+        "Classes /Fall 2025/ISA 616/Car Price Project Group 3B.Rmd"
+      ],
+      "chunks": [
+        {
+          "id": "repro-01",
+          "title": "Load reproducible workflow packages",
+          "prompt": "Load tidyverse and here so file paths are project-relative.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "library(tidyverse)\nlibrary(here)",
+          "hints": [
+            "here() avoids hard-coded local paths.",
+            "tidyverse handles the data workflow."
+          ],
+          "checks": []
+        },
+        {
+          "id": "repro-02",
+          "title": "Read data from a stable path",
+          "prompt": "Read data/car_prices.csv using here() and store it as cars.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "cars <- read_csv(here(\"data\", \"car_prices.csv\"))",
+          "hints": [
+            "Use read_csv().",
+            "Pass folder and file parts separately to here()."
+          ],
+          "checks": []
+        },
+        {
+          "id": "repro-03",
+          "title": "Create a modeling-ready dataframe",
+          "prompt": "Keep price, mileage, year, make, and condition, then remove rows with missing values.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "cars_model <- cars %>%\n  select(price, mileage, year, make, condition) %>%\n  drop_na()",
+          "hints": [
+            "select() narrows the data.",
+            "drop_na() removes incomplete rows."
+          ],
+          "checks": []
+        },
+        {
+          "id": "repro-04",
+          "title": "Write a compact audit summary",
+          "prompt": "Create audit_summary with row count, average price, and average mileage.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "audit_summary <- cars_model %>%\n  summarize(rows = n(), avg_price = mean(price), avg_mileage = mean(mileage))",
+          "hints": [
+            "summarize() creates one-row summaries.",
+            "n() counts rows."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa616-data-story-outline",
+      "title": "Data Storytelling Prep Table",
+      "language": "python",
+      "difficulty": 1,
+      "topics": [
+        "data storytelling",
+        "audience",
+        "decision framing",
+        "communication"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 616/Module 3 - Communication/Module 3 - Week 10 2025/Day 1/Data Storytelling - Right Questions, Audience, Purpose and Storyline-1.pdf",
+        "Classes /Fall 2025/ISA 616/Module 3 - Communication/Module 3 - Week 9 2025/Day 1/Project-Scoping-Worksheet-1.docx",
+        "Classes /Fall 2025/ISA 616/Module 3 - Communication/Module 3 - Week 9 2025/Day 1/Ten Steps for Implementing Analytics.docx"
+      ],
+      "chunks": [
+        {
+          "id": "story-01",
+          "title": "Create the storyline table",
+          "prompt": "Create a pandas dataframe named story with columns section, audience_question, and evidence_needed.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "import pandas as pd\nstory = pd.DataFrame(columns=[\"section\", \"audience_question\", \"evidence_needed\"])",
+          "hints": [
+            "Use pd.DataFrame().",
+            "Start with empty columns so you can append rows later."
+          ],
+          "checks": []
+        },
+        {
+          "id": "story-02",
+          "title": "Add the decision row",
+          "prompt": "Add one row describing the decision the audience needs to make.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "story.loc[len(story)] = [\"Decision\", \"What choice needs to be made?\", \"A clear recommendation and tradeoff summary\"]",
+          "hints": [
+            "loc[len(story)] appends a row.",
+            "Keep the wording decision-focused."
+          ],
+          "checks": []
+        },
+        {
+          "id": "story-03",
+          "title": "Add the evidence row",
+          "prompt": "Add one row for the evidence that supports the recommendation.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "story.loc[len(story)] = [\"Evidence\", \"What data supports the recommendation?\", \"Metric trend, segment comparison, model output, or experiment result\"]",
+          "hints": [
+            "Evidence should connect directly to the decision.",
+            "Avoid listing every analysis if it does not change the choice."
+          ],
+          "checks": []
+        },
+        {
+          "id": "story-04",
+          "title": "Add the risk row",
+          "prompt": "Add one row explaining the main limitation or risk.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "story.loc[len(story)] = [\"Risk\", \"What could make this conclusion wrong?\", \"Data quality issue, model assumption, sample bias, or operational constraint\"]",
+          "hints": [
+            "Good analytics communication names uncertainty.",
+            "The risk row builds trust."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa634-linear-programming-gurobi",
+      "title": "Linear Programming with Gurobi",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "optimization",
+        "linear programming",
+        "Gurobi",
+        "constraints"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 634/9-9-25/gurobi_lp_ip_sensitivity.py",
+        "Classes /Fall 2025/ISA 634/9-11-25/gurobi_lp_ip_sensitivity (1).py",
+        "Classes /Fall 2025/ISA 634/9-9-25/The Diet Problem.docx"
+      ],
+      "chunks": [
+        {
+          "id": "lp-01",
+          "title": "Import Gurobi and create a model",
+          "prompt": "Import gurobipy as gp, import GRB, and create a model named model.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "import gurobipy as gp\nfrom gurobipy import GRB\n\nmodel = gp.Model(\"product_mix\")",
+          "hints": [
+            "Most Gurobi examples use gp as the alias.",
+            "GRB stores constants such as MAXIMIZE."
+          ],
+          "checks": []
+        },
+        {
+          "id": "lp-02",
+          "title": "Add decision variables",
+          "prompt": "Create nonnegative variables x and y for two products.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "x = model.addVar(lb=0, name=\"x\")\ny = model.addVar(lb=0, name=\"y\")",
+          "hints": [
+            "lb=0 means nonnegative.",
+            "Name variables so output is readable."
+          ],
+          "checks": []
+        },
+        {
+          "id": "lp-03",
+          "title": "Add resource constraints",
+          "prompt": "Add constraints: 2x + y <= 100 and x + 3y <= 120.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "model.addConstr(2 * x + y <= 100, name=\"labor\")\nmodel.addConstr(x + 3 * y <= 120, name=\"materials\")",
+          "hints": [
+            "Each constraint gets addConstr().",
+            "Names help interpret shadow prices and diagnostics."
+          ],
+          "checks": []
+        },
+        {
+          "id": "lp-04",
+          "title": "Set objective and solve",
+          "prompt": "Maximize 40x + 50y and optimize the model.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "model.setObjective(40 * x + 50 * y, GRB.MAXIMIZE)\nmodel.optimize()",
+          "hints": [
+            "Use GRB.MAXIMIZE for a maximization problem.",
+            "Call optimize() after variables, constraints, and objective exist."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa634-assignment-network-flow",
+      "title": "Transportation and Assignment Model Pattern",
+      "language": "python",
+      "difficulty": 3,
+      "topics": [
+        "optimization",
+        "transportation",
+        "assignment",
+        "network flow"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 634/10-9-2025/05 - Transportation & Assignment Problems.pdf",
+        "Classes /Fall 2025/ISA 634/10-9-2025/06 - Network Flow Problems.pdf",
+        "Classes /Fall 2025/ISA 634/Exam 2/Topic 1. Transportation and Assignment Problems/05 - Transportation & Assignment Problems (1).pdf"
+      ],
+      "chunks": [
+        {
+          "id": "flow-01",
+          "title": "Define supply, demand, and costs",
+          "prompt": "Create dictionaries for supply, demand, and shipping cost keyed by origin/destination.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "supply = {\"A\": 80, \"B\": 65}\ndemand = {\"X\": 70, \"Y\": 75}\ncost = {(\"A\", \"X\"): 4, (\"A\", \"Y\"): 7, (\"B\", \"X\"): 6, (\"B\", \"Y\"): 3}",
+          "hints": [
+            "Costs are keyed by (origin, destination).",
+            "Use small dictionaries first; scale later."
+          ],
+          "checks": []
+        },
+        {
+          "id": "flow-02",
+          "title": "Create shipment variables",
+          "prompt": "Create one nonnegative decision variable for every origin-destination pair.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "ship = model.addVars(cost.keys(), lb=0, name=\"ship\")",
+          "hints": [
+            "addVars can take the cost keys directly.",
+            "Each variable represents flow on an arc."
+          ],
+          "checks": []
+        },
+        {
+          "id": "flow-03",
+          "title": "Add supply constraints",
+          "prompt": "For each origin, ensure total outbound shipments do not exceed supply.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "for i in supply:\n    model.addConstr(gp.quicksum(ship[i, j] for j in demand) <= supply[i], name=f\"supply_{i}\")",
+          "hints": [
+            "Loop over origins.",
+            "Sum all destinations for each origin."
+          ],
+          "checks": []
+        },
+        {
+          "id": "flow-04",
+          "title": "Add demand constraints and objective",
+          "prompt": "Meet each destination demand and minimize total shipping cost.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "for j in demand:\n    model.addConstr(gp.quicksum(ship[i, j] for i in supply) >= demand[j], name=f\"demand_{j}\")\n\nmodel.setObjective(gp.quicksum(cost[i, j] * ship[i, j] for i, j in cost), GRB.MINIMIZE)\nmodel.optimize()",
+          "hints": [
+            "Demand sums inbound shipments.",
+            "The objective multiplies cost by flow."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa630-gradient-descent-numpy",
+      "title": "Gradient Descent from Scratch",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "NumPy",
+        "loss functions",
+        "gradients",
+        "gradient descent"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 630/Module 1_ [Gradients, Regularization]/[1] Learning, Loss Functions, Cost Functions, Gradients /Loss, Cost, and Gradients.ipynb",
+        "Classes /Spring 2026/ISA 630/Module 1_ [Gradients, Regularization]/[3] Gradient Descent Algorithm/Gradient_Descent_Algorithm.ipynb",
+        "Literature to Know/DB, BI, & Analytics/ML/d2l-en.pdf"
+      ],
+      "chunks": [
+        {
+          "id": "gd-01",
+          "title": "Import NumPy and set training data",
+          "prompt": "Import numpy and create arrays X and y for a tiny linear regression example.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "import numpy as np\n\nX = np.array([1, 2, 3, 4], dtype=float)\ny = np.array([3, 5, 7, 9], dtype=float)",
+          "hints": [
+            "Use dtype=float so gradient math is smooth.",
+            "This data follows roughly y = 2x + 1."
+          ],
+          "checks": []
+        },
+        {
+          "id": "gd-02",
+          "title": "Initialize parameters",
+          "prompt": "Initialize weight w, bias b, and learning_rate.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "w = 0.0\nb = 0.0\nlearning_rate = 0.01",
+          "hints": [
+            "Start with simple scalar parameters.",
+            "The learning rate controls step size."
+          ],
+          "checks": []
+        },
+        {
+          "id": "gd-03",
+          "title": "Compute predictions and mean squared error",
+          "prompt": "Calculate predictions and the mean squared error loss.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "preds = w * X + b\nloss = np.mean((preds - y) ** 2)",
+          "hints": [
+            "Linear prediction is w * X + b.",
+            "Mean squared error averages squared residuals."
+          ],
+          "checks": []
+        },
+        {
+          "id": "gd-04",
+          "title": "Take one gradient descent step",
+          "prompt": "Compute gradients for w and b, then update both parameters.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "dw = np.mean(2 * (preds - y) * X)\ndb = np.mean(2 * (preds - y))\n\nw = w - learning_rate * dw\nb = b - learning_rate * db",
+          "hints": [
+            "Gradients point uphill; subtract them to reduce loss.",
+            "The bias gradient does not multiply by X."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa630-cnn-keras-skeleton",
+      "title": "CNN Image Classifier Skeleton",
+      "language": "python",
+      "difficulty": 3,
+      "topics": [
+        "deep learning",
+        "CNN",
+        "Keras",
+        "image classification"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 630/Module 5_ [Convolution Neural Networks]/[3] Convolution Neural Networks/CNN_Implementation_worksheet.ipynb",
+        "Classes /Spring 2026/ISA 630/Module 5_ [Convolution Neural Networks]/[18] Introduction_to_CNNs.ipynb",
+        "Classes /Spring 2026/ISA 630/Projects/project 3/pizza_vs_steak.ipynb"
+      ],
+      "chunks": [
+        {
+          "id": "cnn-01",
+          "title": "Import Keras building blocks",
+          "prompt": "Import Sequential, Conv2D, MaxPooling2D, Flatten, and Dense.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "from tensorflow.keras.models import Sequential\nfrom tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense",
+          "hints": [
+            "CNN layers live under tensorflow.keras.layers.",
+            "Sequential is enough for a first image classifier."
+          ],
+          "checks": []
+        },
+        {
+          "id": "cnn-02",
+          "title": "Start the model with a convolution block",
+          "prompt": "Create a Sequential model with a Conv2D layer and MaxPooling2D layer for 64x64 RGB images.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "model = Sequential([\n    Conv2D(32, (3, 3), activation=\"relu\", input_shape=(64, 64, 3)),\n    MaxPooling2D((2, 2)),\n])",
+          "hints": [
+            "RGB images have 3 channels.",
+            "Pooling reduces spatial size."
+          ],
+          "checks": []
+        },
+        {
+          "id": "cnn-03",
+          "title": "Add dense classification layers",
+          "prompt": "Flatten the convolution output and add a hidden Dense layer plus a sigmoid output layer.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "model.add(Flatten())\nmodel.add(Dense(64, activation=\"relu\"))\nmodel.add(Dense(1, activation=\"sigmoid\"))",
+          "hints": [
+            "Sigmoid is for binary classification.",
+            "Flatten bridges convolution layers to dense layers."
+          ],
+          "checks": []
+        },
+        {
+          "id": "cnn-04",
+          "title": "Compile the classifier",
+          "prompt": "Compile the model for binary classification using Adam and accuracy.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "model.compile(optimizer=\"adam\", loss=\"binary_crossentropy\", metrics=[\"accuracy\"])",
+          "hints": [
+            "binary_crossentropy matches a sigmoid output.",
+            "accuracy is an easy first metric, not the only metric."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa630-rnn-sequence-windowing",
+      "title": "Sequence Windowing for RNNs",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "RNN",
+        "LSTM",
+        "sequence data",
+        "time series"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 630/Module 6_ [Recurrent Neural Networks]/sequence.ipynb",
+        "Classes /Spring 2026/ISA 630/Module 6_ [Recurrent Neural Networks]/lstm.ipynb",
+        "Classes /Spring 2026/ISA 630/Module 6_ [Recurrent Neural Networks]/bitcoin_closing_price_forecasting_homework.ipynb"
+      ],
+      "chunks": [
+        {
+          "id": "rnn-01",
+          "title": "Create a numeric series",
+          "prompt": "Import numpy and create a simple array named series.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "import numpy as np\n\nseries = np.array([10, 12, 13, 15, 18, 21, 23, 25, 28, 30], dtype=float)",
+          "hints": [
+            "A sequence is ordered.",
+            "dtype=float is useful for scaling/modeling."
+          ],
+          "checks": []
+        },
+        {
+          "id": "rnn-02",
+          "title": "Set window and horizon",
+          "prompt": "Set window_size to 3 and horizon to 1.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "window_size = 3\nhorizon = 1",
+          "hints": [
+            "Window size is how much history the model sees.",
+            "Horizon is how far ahead it predicts."
+          ],
+          "checks": []
+        },
+        {
+          "id": "rnn-03",
+          "title": "Build input/output windows",
+          "prompt": "Loop through the series and build X windows with matching y next-step values.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "X, y = [], []\nfor i in range(len(series) - window_size - horizon + 1):\n    X.append(series[i:i + window_size])\n    y.append(series[i + window_size + horizon - 1])",
+          "hints": [
+            "Each X row is a slice of prior values.",
+            "The y value is the future target after the window."
+          ],
+          "checks": []
+        },
+        {
+          "id": "rnn-04",
+          "title": "Convert windows into model arrays",
+          "prompt": "Convert X and y to NumPy arrays and reshape X for an RNN with one feature.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "X = np.array(X).reshape(-1, window_size, 1)\ny = np.array(y)",
+          "hints": [
+            "RNN input shape is samples x timesteps x features.",
+            "Here there is one feature per timestep."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa632-pyspark-transformations",
+      "title": "PySpark DataFrame Transformations",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "Spark",
+        "PySpark",
+        "DataFrames",
+        "distributed computing"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 632/Module 2. Spark/ISA632_Module 2. Spark.ipynb",
+        "Classes /Spring 2026/ISA 632/Module 4. Distributed Computing on Spark/ISA632-M04_Lab1_20260316.pdf",
+        "Literature to Know/DB, BI, & Analytics/the-data-intelligence-platform-for-dummies-databricks-special-edition.pdf"
+      ],
+      "chunks": [
+        {
+          "id": "spark-01",
+          "title": "Import Spark functions",
+          "prompt": "Import col, avg, and count from pyspark.sql.functions.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "from pyspark.sql.functions import col, avg, count",
+          "hints": [
+            "Spark column expressions use col().",
+            "Aggregations come from pyspark.sql.functions."
+          ],
+          "checks": []
+        },
+        {
+          "id": "spark-02",
+          "title": "Filter active accounts",
+          "prompt": "Create active_accounts by filtering accounts where status equals \"active\".",
+          "imports": [],
+          "starterCode": "",
+          "solution": "active_accounts = accounts.filter(col(\"status\") == \"active\")",
+          "hints": [
+            "Use filter().",
+            "Compare a Spark column with ==."
+          ],
+          "checks": []
+        },
+        {
+          "id": "spark-03",
+          "title": "Aggregate by segment",
+          "prompt": "Create segment_metrics with count and average revenue by segment.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "segment_metrics = active_accounts.groupBy(\"segment\").agg(\n    count(\"*\").alias(\"account_count\"),\n    avg(\"revenue\").alias(\"avg_revenue\")\n)",
+          "hints": [
+            "Use groupBy().agg().",
+            "Aliases make output readable."
+          ],
+          "checks": []
+        },
+        {
+          "id": "spark-04",
+          "title": "Sort distributed results",
+          "prompt": "Sort segment_metrics by avg_revenue descending.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "segment_metrics = segment_metrics.orderBy(col(\"avg_revenue\").desc())",
+          "hints": [
+            "Use orderBy().",
+            "desc() sorts high to low."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa632-recommender-als",
+      "title": "Collaborative Filtering with ALS",
+      "language": "python",
+      "difficulty": 3,
+      "topics": [
+        "recommender systems",
+        "ALS",
+        "collaborative filtering",
+        "Spark ML"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 632/Module 6. Recommender Systems/isa632_m06_eg_1 (1).ipynb",
+        "Classes /Spring 2026/ISA 632/Module 6. Recommender Systems/ISA632-M06_RecSys_20260404.pdf",
+        "Classes /Spring 2026/ISA 632/crossing_books.html"
+      ],
+      "chunks": [
+        {
+          "id": "als-01",
+          "title": "Import ALS and evaluator",
+          "prompt": "Import ALS and RegressionEvaluator from Spark ML.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "from pyspark.ml.recommendation import ALS\nfrom pyspark.ml.evaluation import RegressionEvaluator",
+          "hints": [
+            "ALS handles collaborative filtering.",
+            "RMSE is often used for rating prediction."
+          ],
+          "checks": []
+        },
+        {
+          "id": "als-02",
+          "title": "Create the ALS model",
+          "prompt": "Create an ALS model using userId, itemId, rating, and coldStartStrategy=\"drop\".",
+          "imports": [],
+          "starterCode": "",
+          "solution": "als = ALS(userCol=\"userId\", itemCol=\"itemId\", ratingCol=\"rating\", coldStartStrategy=\"drop\")",
+          "hints": [
+            "Cold-start rows can produce NaN predictions.",
+            "Dropping them keeps evaluation cleaner."
+          ],
+          "checks": []
+        },
+        {
+          "id": "als-03",
+          "title": "Fit and predict",
+          "prompt": "Fit ALS on train_df and predict ratings for test_df.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "als_model = als.fit(train_df)\npredictions = als_model.transform(test_df)",
+          "hints": [
+            "fit() trains the model.",
+            "transform() adds predictions."
+          ],
+          "checks": []
+        },
+        {
+          "id": "als-04",
+          "title": "Evaluate RMSE",
+          "prompt": "Evaluate predictions using RMSE with rating as the label and prediction as the prediction column.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "evaluator = RegressionEvaluator(metricName=\"rmse\", labelCol=\"rating\", predictionCol=\"prediction\")\nrmse = evaluator.evaluate(predictions)",
+          "hints": [
+            "Lower RMSE is better.",
+            "Use the same label column used during training."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa632-rag-evaluation",
+      "title": "RAG Retrieval Evaluation Table",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "GenAI",
+        "RAG",
+        "retrieval evaluation",
+        "LLM systems"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 632/Module 8. GenAI (1) -  Prompt Engineering & RAG/ISA632-M08_GenAI-1_20260426.pdf",
+        "Classes /Spring 2026/ISA 632/Module 9. GenAI(2) - Evaluation & Deployment/ISA632-M09_GenAI-2_20260428.pdf",
+        "Classes /Spring 2026/ISA 632/Module 10. GenAI(3) - Agentic AI & LLM Fine-tuning/ISA632-M10-_GenAI-3_20260506.pdf"
+      ],
+      "chunks": [
+        {
+          "id": "rag-01",
+          "title": "Create a reviewed retrieval table",
+          "prompt": "Create a dataframe with query, retrieved_doc, relevant, and answer_supported columns.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "import pandas as pd\nreviews = pd.DataFrame(columns=[\"query\", \"retrieved_doc\", \"relevant\", \"answer_supported\"])",
+          "hints": [
+            "A simple review table is enough to start.",
+            "Separate retrieval relevance from answer support."
+          ],
+          "checks": []
+        },
+        {
+          "id": "rag-02",
+          "title": "Add a reviewed query",
+          "prompt": "Append one row for a query where the retrieved document is relevant and supports the answer.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "reviews.loc[len(reviews)] = [\"What is feature leakage?\", \"model_validation_notes\", True, True]",
+          "hints": [
+            "Use booleans for review fields.",
+            "A relevant doc should actually answer the query."
+          ],
+          "checks": []
+        },
+        {
+          "id": "rag-03",
+          "title": "Calculate context recall proxy",
+          "prompt": "Calculate the share of reviewed queries where relevant is True.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "context_recall_proxy = reviews[\"relevant\"].mean()",
+          "hints": [
+            "True averages as 1, False averages as 0.",
+            "This is a simple proxy, not a full benchmark."
+          ],
+          "checks": []
+        },
+        {
+          "id": "rag-04",
+          "title": "Calculate answer support rate",
+          "prompt": "Calculate the share of reviewed queries where answer_supported is True.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "answer_support_rate = reviews[\"answer_supported\"].mean()",
+          "hints": [
+            "Support means the answer can be traced to retrieved content.",
+            "This helps separate retrieval failure from generation failure."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa633-ab-test-binary",
+      "title": "A/B Test for Binary Conversion",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "A/B testing",
+        "binary response",
+        "conversion rate",
+        "hypothesis testing"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 633/2. Module 2_ A-B Testing/Notes/2. ab-testing-binary-response.html",
+        "Classes /Spring 2026/ISA 633/2. Module 2_ A-B Testing/Notes/4. Designing_valid_AB_tests.html",
+        "Classes /Spring 2026/ISA 633/633-source/[3] AB binary.pdf"
+      ],
+      "chunks": [
+        {
+          "id": "ab-01",
+          "title": "Create treatment summaries",
+          "prompt": "Create a dataframe with visitors and conversions for variants A and B.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "import pandas as pd\nab = pd.DataFrame({\n    \"variant\": [\"A\", \"B\"],\n    \"visitors\": [1000, 980],\n    \"conversions\": [92, 115],\n})",
+          "hints": [
+            "Each row is one experimental variant.",
+            "Keep counts aggregated for this worksheet."
+          ],
+          "checks": []
+        },
+        {
+          "id": "ab-02",
+          "title": "Calculate conversion rates",
+          "prompt": "Add a conversion_rate column.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "ab[\"conversion_rate\"] = ab[\"conversions\"] / ab[\"visitors\"]",
+          "hints": [
+            "Conversion rate is conversions divided by visitors.",
+            "Use vectorized pandas math."
+          ],
+          "checks": []
+        },
+        {
+          "id": "ab-03",
+          "title": "Calculate lift",
+          "prompt": "Calculate the relative lift of B compared with A.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "rate_a = ab.loc[ab[\"variant\"] == \"A\", \"conversion_rate\"].iloc[0]\nrate_b = ab.loc[ab[\"variant\"] == \"B\", \"conversion_rate\"].iloc[0]\nlift = (rate_b - rate_a) / rate_a",
+          "hints": [
+            "Relative lift divides the difference by the baseline.",
+            "Variant A is the baseline."
+          ],
+          "checks": []
+        },
+        {
+          "id": "ab-04",
+          "title": "Run a two-proportion z-test",
+          "prompt": "Use statsmodels proportions_ztest to test whether conversion rates differ.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "from statsmodels.stats.proportion import proportions_ztest\n\ncount = ab[\"conversions\"].to_numpy()\nnobs = ab[\"visitors\"].to_numpy()\nz_stat, p_value = proportions_ztest(count, nobs)",
+          "hints": [
+            "count holds successes.",
+            "nobs holds total observations."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa633-bandit-epsilon-greedy",
+      "title": "Epsilon-Greedy Bandit Simulation",
+      "language": "python",
+      "difficulty": 3,
+      "topics": [
+        "multi-armed bandits",
+        "epsilon-greedy",
+        "exploration",
+        "exploitation"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 633/6. Module 5_ Multi-arm bandits/Notes/Introduction to Multi Arm Bandits.Rmd",
+        "Classes /Spring 2026/ISA 633/633-source/[18] Bandits-binary.pdf",
+        "Classes /Spring 2026/ISA 633/633-source/[19] Bandits--cont..pdf"
+      ],
+      "chunks": [
+        {
+          "id": "bandit-01",
+          "title": "Initialize reward tracking",
+          "prompt": "Create arrays for arm counts and estimated values for three arms.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "import numpy as np\n\nn_arms = 3\ncounts = np.zeros(n_arms)\nvalues = np.zeros(n_arms)\nepsilon = 0.1",
+          "hints": [
+            "counts tracks how often each arm is pulled.",
+            "values stores estimated average reward."
+          ],
+          "checks": []
+        },
+        {
+          "id": "bandit-02",
+          "title": "Choose an arm",
+          "prompt": "Choose a random arm with probability epsilon, otherwise choose the arm with the highest estimated value.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "if np.random.random() < epsilon:\n    arm = np.random.randint(n_arms)\nelse:\n    arm = np.argmax(values)",
+          "hints": [
+            "Random choice is exploration.",
+            "argmax is exploitation."
+          ],
+          "checks": []
+        },
+        {
+          "id": "bandit-03",
+          "title": "Simulate a reward",
+          "prompt": "Given true_rates, simulate a binary reward for the selected arm.",
+          "imports": [],
+          "starterCode": "true_rates = np.array([0.05, 0.08, 0.11])",
+          "solution": "reward = 1 if np.random.random() < true_rates[arm] else 0",
+          "hints": [
+            "A binary reward is 1 or 0.",
+            "Higher true rate means success is more likely."
+          ],
+          "checks": []
+        },
+        {
+          "id": "bandit-04",
+          "title": "Update the selected arm estimate",
+          "prompt": "Increment the selected arm count and update its running average reward.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "counts[arm] += 1\nvalues[arm] = values[arm] + (reward - values[arm]) / counts[arm]",
+          "hints": [
+            "This is an online mean update.",
+            "Only the selected arm changes."
+          ],
+          "checks": []
+        }
+      ]
+    },
+    {
+      "type": "coding-worksheet",
+      "version": 1,
+      "id": "isa633-causal-inference-did",
+      "title": "Difference-in-Differences Setup",
+      "language": "python",
+      "difficulty": 3,
+      "topics": [
+        "causal inference",
+        "difference-in-differences",
+        "treatment effect",
+        "regression"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 633/10. Module 8_ Causal Inference/rmd notes/Introduction to Causal Inference.Rmd",
+        "Classes /Spring 2026/ISA 633/10. Module 8_ Causal Inference/html Notes/Introduction-to-Causal-Inference.html",
+        "Classes /Spring 2026/ISA 633/633-source/[22] Intro causal.pdf"
+      ],
+      "chunks": [
+        {
+          "id": "did-01",
+          "title": "Create indicator columns",
+          "prompt": "Create treated, post, and treated_post columns in df.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "df[\"treated\"] = (df[\"group\"] == \"treated\").astype(int)\ndf[\"post\"] = (df[\"period\"] == \"post\").astype(int)\ndf[\"treated_post\"] = df[\"treated\"] * df[\"post\"]",
+          "hints": [
+            "The interaction is treated times post.",
+            "astype(int) converts True/False to 1/0."
+          ],
+          "checks": []
+        },
+        {
+          "id": "did-02",
+          "title": "Fit the DiD regression",
+          "prompt": "Use statsmodels to regress outcome on treated, post, and treated_post.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "import statsmodels.formula.api as smf\n\nmodel = smf.ols(\"outcome ~ treated + post + treated_post\", data=df).fit()",
+          "hints": [
+            "The interaction coefficient is the DiD estimate.",
+            "OLS formula syntax uses ~."
+          ],
+          "checks": []
+        },
+        {
+          "id": "did-03",
+          "title": "Extract the treatment effect estimate",
+          "prompt": "Store the treated_post coefficient in did_effect.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "did_effect = model.params[\"treated_post\"]",
+          "hints": [
+            "params is indexed by coefficient name.",
+            "treated_post is the estimated causal contrast under assumptions."
+          ],
+          "checks": []
+        },
+        {
+          "id": "did-04",
+          "title": "Summarize uncertainty",
+          "prompt": "Store the p-value and confidence interval for treated_post.",
+          "imports": [],
+          "starterCode": "",
+          "solution": "did_p_value = model.pvalues[\"treated_post\"]\ndid_ci = model.conf_int().loc[\"treated_post\"]",
+          "hints": [
+            "pvalues stores significance information.",
+            "conf_int() returns lower and upper bounds."
+          ],
+          "checks": []
+        }
+      ]
+    }
+  ],
+  "sourceMap": [
+    {
+      "id": "isa512-dax-filter-context",
+      "title": "DAX Filter Context and Safe Measures",
+      "language": "dax",
+      "difficulty": 2,
+      "topics": [
+        "Power BI",
+        "DAX",
+        "filter context",
+        "CALCULATE",
+        "ALLSELECTED"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 512/ISA 512/Module 1 - Data Preparation using DAX Query Language/M1.3 Table Functions in DAX/03 Ignore filters.pbix",
+        "Classes /Fall 2025/ISA 512/ISA 512/Module 1 - Data Preparation using DAX Query Language/M1.3 Table Functions in DAX/07b ALLSELECTED.pbix",
+        "Classes /Fall 2025/ISA 512/ISA 512/Module 1 - Data Preparation using DAX Query Language/M1.4 Evaluation Contexts/1.4.b row and filter contexts (demo).pbix"
+      ]
+    },
+    {
+      "id": "isa512-star-schema-date-modeling",
+      "title": "Star Schema and Date Relationships",
+      "language": "dax",
+      "difficulty": 3,
+      "topics": [
+        "Power BI",
+        "star schema",
+        "date table",
+        "USERELATIONSHIP",
+        "grain"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 512/ISA 512/Module 2 - Data Modeling using Power BI/M2.3 Building a Star Scheme/2.3.b - header and detail (begin).pbix",
+        "Classes /Fall 2025/ISA 512/ISA 512/Module 2 - Data Modeling using Power BI/M2.4 Working with Time and Date/2.4.c - Multiple relationship with date.pbix",
+        "Literature to Know/DB, BI, & Analytics/The Data Warehouse Toolkit - Kimball.pdf"
+      ]
+    },
+    {
+      "id": "isa514-python-pandas-cleaning",
+      "title": "Python Data Cleaning with pandas",
+      "language": "python",
+      "difficulty": 1,
+      "topics": [
+        "Python",
+        "pandas",
+        "data cleaning",
+        "groupby"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 514/Module 2 - Python/Module 2 - Python (I)/Tutorial01_PythonBasics.ipynb",
+        "Classes /Fall 2025/ISA 514/Module 3 - Python (II)/isa514-m03_eg1.ipynb",
+        "Classes /Fall 2025/ISA 514/Homework Assignments/Homework 1/FDIC-1.ipynb"
+      ]
+    },
+    {
+      "id": "isa514-sql-flights-joins",
+      "title": "SQL Joins and Aggregation for Flight Data",
+      "language": "sql",
+      "difficulty": 2,
+      "topics": [
+        "SQL",
+        "joins",
+        "aggregation",
+        "flight data"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 514/Module 3 - Python (II)/CreateTables.ddl",
+        "Classes /Fall 2025/ISA 514/Module 3 - Python (II)/airline_data.sql",
+        "Classes /Fall 2025/ISA 514/Module 3 - Python (II)/flights_data.sql"
+      ]
+    },
+    {
+      "id": "isa514-text-mining-tfidf",
+      "title": "Text Mining Pipeline with TF-IDF",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "text mining",
+        "TF-IDF",
+        "classification",
+        "scikit-learn"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 514/Module 7 - Text Mining/Exercises and Presentations/isa514-m07_demo1.ipynb",
+        "Classes /Fall 2025/ISA 514/Module 7 - Text Mining/Exercises and Presentations/isa514-m07_ex1.ipynb",
+        "Classes /Fall 2025/ISA 514/Module 7 - Text Mining/spam.ipynb"
+      ]
+    },
+    {
+      "id": "isa591-tidyverse-eda",
+      "title": "Tidyverse EDA and Feature Checks",
+      "language": "r",
+      "difficulty": 1,
+      "topics": [
+        "R",
+        "tidyverse",
+        "EDA",
+        "feature checks"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 591/Module 0 - Pre-Term Review Material/Module 0/Intro-to-Tidyverse.html",
+        "Classes /Fall 2025/ISA 591/Module 2 - Exploratory Data Analysis/Module 2/Module-2-Day-1-Notes-Final.html",
+        "Literature to Know/DB, BI, & Analytics/ML/ISA591 Textbook.docx"
+      ]
+    },
+    {
+      "id": "isa591-tree-model-baseline",
+      "title": "Decision Tree Baseline in R",
+      "language": "r",
+      "difficulty": 2,
+      "topics": [
+        "R",
+        "decision tree",
+        "classification",
+        "confusion matrix"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 591/Module 6 - Tree-Based Models/Module 6 - Lab 1/Module 6 Lab 1 Customer Churn.Rmd",
+        "Classes /Fall 2025/ISA 591/Final projectr/Part 2 - Tree 1 - Decision Tree.Rmd",
+        "Classes /Fall 2025/ISA 591/Module 4 - Evaluating Model Performance/Module 4 Notes-Day 1.Rmd"
+      ]
+    },
+    {
+      "id": "isa616-reproducible-analysis-plan",
+      "title": "Reproducible Analytics Project Skeleton",
+      "language": "r",
+      "difficulty": 2,
+      "topics": [
+        "reproducibility",
+        "analytics workflow",
+        "R project structure"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 616/Module 2 - Reproducible Data Science - Analytics Workflow/Module 2 - Week 6/Day 1/Reproducible Data Science-Part 1-1.pdf",
+        "Classes /Fall 2025/ISA 616/Module 2 - Reproducible Data Science - Analytics Workflow/Module 2 - Week 6/Day 1/Roger Peng Article - Reproducible Research.pdf",
+        "Classes /Fall 2025/ISA 616/Car Price Project Group 3B.Rmd"
+      ]
+    },
+    {
+      "id": "isa616-data-story-outline",
+      "title": "Data Storytelling Prep Table",
+      "language": "python",
+      "difficulty": 1,
+      "topics": [
+        "data storytelling",
+        "audience",
+        "decision framing",
+        "communication"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 616/Module 3 - Communication/Module 3 - Week 10 2025/Day 1/Data Storytelling - Right Questions, Audience, Purpose and Storyline-1.pdf",
+        "Classes /Fall 2025/ISA 616/Module 3 - Communication/Module 3 - Week 9 2025/Day 1/Project-Scoping-Worksheet-1.docx",
+        "Classes /Fall 2025/ISA 616/Module 3 - Communication/Module 3 - Week 9 2025/Day 1/Ten Steps for Implementing Analytics.docx"
+      ]
+    },
+    {
+      "id": "isa634-linear-programming-gurobi",
+      "title": "Linear Programming with Gurobi",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "optimization",
+        "linear programming",
+        "Gurobi",
+        "constraints"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 634/9-9-25/gurobi_lp_ip_sensitivity.py",
+        "Classes /Fall 2025/ISA 634/9-11-25/gurobi_lp_ip_sensitivity (1).py",
+        "Classes /Fall 2025/ISA 634/9-9-25/The Diet Problem.docx"
+      ]
+    },
+    {
+      "id": "isa634-assignment-network-flow",
+      "title": "Transportation and Assignment Model Pattern",
+      "language": "python",
+      "difficulty": 3,
+      "topics": [
+        "optimization",
+        "transportation",
+        "assignment",
+        "network flow"
+      ],
+      "sourceRefs": [
+        "Classes /Fall 2025/ISA 634/10-9-2025/05 - Transportation & Assignment Problems.pdf",
+        "Classes /Fall 2025/ISA 634/10-9-2025/06 - Network Flow Problems.pdf",
+        "Classes /Fall 2025/ISA 634/Exam 2/Topic 1. Transportation and Assignment Problems/05 - Transportation & Assignment Problems (1).pdf"
+      ]
+    },
+    {
+      "id": "isa630-gradient-descent-numpy",
+      "title": "Gradient Descent from Scratch",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "NumPy",
+        "loss functions",
+        "gradients",
+        "gradient descent"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 630/Module 1_ [Gradients, Regularization]/[1] Learning, Loss Functions, Cost Functions, Gradients /Loss, Cost, and Gradients.ipynb",
+        "Classes /Spring 2026/ISA 630/Module 1_ [Gradients, Regularization]/[3] Gradient Descent Algorithm/Gradient_Descent_Algorithm.ipynb",
+        "Literature to Know/DB, BI, & Analytics/ML/d2l-en.pdf"
+      ]
+    },
+    {
+      "id": "isa630-cnn-keras-skeleton",
+      "title": "CNN Image Classifier Skeleton",
+      "language": "python",
+      "difficulty": 3,
+      "topics": [
+        "deep learning",
+        "CNN",
+        "Keras",
+        "image classification"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 630/Module 5_ [Convolution Neural Networks]/[3] Convolution Neural Networks/CNN_Implementation_worksheet.ipynb",
+        "Classes /Spring 2026/ISA 630/Module 5_ [Convolution Neural Networks]/[18] Introduction_to_CNNs.ipynb",
+        "Classes /Spring 2026/ISA 630/Projects/project 3/pizza_vs_steak.ipynb"
+      ]
+    },
+    {
+      "id": "isa630-rnn-sequence-windowing",
+      "title": "Sequence Windowing for RNNs",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "RNN",
+        "LSTM",
+        "sequence data",
+        "time series"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 630/Module 6_ [Recurrent Neural Networks]/sequence.ipynb",
+        "Classes /Spring 2026/ISA 630/Module 6_ [Recurrent Neural Networks]/lstm.ipynb",
+        "Classes /Spring 2026/ISA 630/Module 6_ [Recurrent Neural Networks]/bitcoin_closing_price_forecasting_homework.ipynb"
+      ]
+    },
+    {
+      "id": "isa632-pyspark-transformations",
+      "title": "PySpark DataFrame Transformations",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "Spark",
+        "PySpark",
+        "DataFrames",
+        "distributed computing"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 632/Module 2. Spark/ISA632_Module 2. Spark.ipynb",
+        "Classes /Spring 2026/ISA 632/Module 4. Distributed Computing on Spark/ISA632-M04_Lab1_20260316.pdf",
+        "Literature to Know/DB, BI, & Analytics/the-data-intelligence-platform-for-dummies-databricks-special-edition.pdf"
+      ]
+    },
+    {
+      "id": "isa632-recommender-als",
+      "title": "Collaborative Filtering with ALS",
+      "language": "python",
+      "difficulty": 3,
+      "topics": [
+        "recommender systems",
+        "ALS",
+        "collaborative filtering",
+        "Spark ML"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 632/Module 6. Recommender Systems/isa632_m06_eg_1 (1).ipynb",
+        "Classes /Spring 2026/ISA 632/Module 6. Recommender Systems/ISA632-M06_RecSys_20260404.pdf",
+        "Classes /Spring 2026/ISA 632/crossing_books.html"
+      ]
+    },
+    {
+      "id": "isa632-rag-evaluation",
+      "title": "RAG Retrieval Evaluation Table",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "GenAI",
+        "RAG",
+        "retrieval evaluation",
+        "LLM systems"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 632/Module 8. GenAI (1) -  Prompt Engineering & RAG/ISA632-M08_GenAI-1_20260426.pdf",
+        "Classes /Spring 2026/ISA 632/Module 9. GenAI(2) - Evaluation & Deployment/ISA632-M09_GenAI-2_20260428.pdf",
+        "Classes /Spring 2026/ISA 632/Module 10. GenAI(3) - Agentic AI & LLM Fine-tuning/ISA632-M10-_GenAI-3_20260506.pdf"
+      ]
+    },
+    {
+      "id": "isa633-ab-test-binary",
+      "title": "A/B Test for Binary Conversion",
+      "language": "python",
+      "difficulty": 2,
+      "topics": [
+        "A/B testing",
+        "binary response",
+        "conversion rate",
+        "hypothesis testing"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 633/2. Module 2_ A-B Testing/Notes/2. ab-testing-binary-response.html",
+        "Classes /Spring 2026/ISA 633/2. Module 2_ A-B Testing/Notes/4. Designing_valid_AB_tests.html",
+        "Classes /Spring 2026/ISA 633/633-source/[3] AB binary.pdf"
+      ]
+    },
+    {
+      "id": "isa633-bandit-epsilon-greedy",
+      "title": "Epsilon-Greedy Bandit Simulation",
+      "language": "python",
+      "difficulty": 3,
+      "topics": [
+        "multi-armed bandits",
+        "epsilon-greedy",
+        "exploration",
+        "exploitation"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 633/6. Module 5_ Multi-arm bandits/Notes/Introduction to Multi Arm Bandits.Rmd",
+        "Classes /Spring 2026/ISA 633/633-source/[18] Bandits-binary.pdf",
+        "Classes /Spring 2026/ISA 633/633-source/[19] Bandits--cont..pdf"
+      ]
+    },
+    {
+      "id": "isa633-causal-inference-did",
+      "title": "Difference-in-Differences Setup",
+      "language": "python",
+      "difficulty": 3,
+      "topics": [
+        "causal inference",
+        "difference-in-differences",
+        "treatment effect",
+        "regression"
+      ],
+      "sourceRefs": [
+        "Classes /Spring 2026/ISA 633/10. Module 8_ Causal Inference/rmd notes/Introduction to Causal Inference.Rmd",
+        "Classes /Spring 2026/ISA 633/10. Module 8_ Causal Inference/html Notes/Introduction-to-Causal-Inference.html",
+        "Classes /Spring 2026/ISA 633/633-source/[22] Intro causal.pdf"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+content-pipeline/extracted/
+content-pipeline/source-materials/
+local-content/
+private-content/
+extracted_rows.json
+models/*.gguf
+models/*.bin
+models/*.safetensors
+.DS_Store
+*.log
+.claude/
+.codex/
