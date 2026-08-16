@@ -406,7 +406,7 @@ The numeric variables in the training and holdout datasets were examined using b
 
 ```{r data visualization}
 DataExplorer::plot_boxplot(
-  train_raw %>% 
+  train_raw %>%
     select(loan_default, all_of(numeric_vars)),
   by = "loan_default",
   ggtheme =
@@ -430,7 +430,7 @@ DataExplorer::plot_boxplot(
 
 ```{r data visualization}
 DataExplorer::plot_boxplot(
-  hold_raw %>% 
+  hold_raw %>%
     select(loan_default, all_of(hold_numeric_vars)),
   by = "loan_default",
   ggtheme =
@@ -593,16 +593,16 @@ The categorical variables in the training and holdout datasets were examined usi
 ```{r data visualization}
 bar_plots <- function(data, categorical_vars, title_prefix, max_levels = 20) {
   for (col in categorical_vars) {
-    
+
     n_levels <- data %>%
       distinct(.data[[col]]) %>%
       nrow()
-    
+
     if (n_levels > max_levels) {
       message("Skipping ", col, ": ", n_levels, " unique levels.")
       next
     }
-    
+
     plot <- ggplot(data, aes(x = .data[[col]])) +
       geom_bar(fill = "#4E79A7", color = "white", alpha = 0.9) +
       labs(
@@ -1191,7 +1191,7 @@ train_raw <- train_raw %>%
 ### Missing Value Treatment
 _____________________________________________________________________________________________________________
 
-Median imputation was employed as the imputation strategy to handle missing values. Later, this will be done on the holdout dataset. The training data median will be used on the holdout dataset as is standard protocol. 
+Median imputation was employed as the imputation strategy to handle missing values. Later, this will be done on the holdout dataset. The training data median will be used on the holdout dataset as is standard protocol.
 
 ```{r data preprocessing}
 train_raw <- train_raw %>%
@@ -1803,10 +1803,10 @@ hold_pca <- recipes::bake(pca_prep, new_data = hold_dummy)
 
 The significance of the class imbalance can be exemplified by the following explanation. If a model predicts most loans as non-default, it can obtain high accuracy while failing to identify default cases. Because defaults are the minority class, sampling and threshold tuning are considered as part of the modeling workflow.
 
-### Class Distribution in Training Dataset 
+### Class Distribution in Training Dataset
 _____________________________________________________________________________________________________________
 
-The target variable distribution observed shows an imbalanced, which also matches previous observations found from the target variable distributions. 
+The target variable distribution observed shows an imbalanced, which also matches previous observations found from the target variable distributions.
 
 ```{r sample}
 table(train$loan_default)
@@ -1824,19 +1824,19 @@ table(hold$loan_default)
 ### Sampling Strategy
 _____________________________________________________________________________________________________________
 
-The main sampling option considered is undersampling the majority class. Undersampling creates a balanced training dataset by keeping all default cases and sampling an equal number of non-default cases. This can increase recall for the default class, but it may discard useful information from the majority class. 
+The main sampling option considered is undersampling the majority class. Undersampling creates a balanced training dataset by keeping all default cases and sampling an equal number of non-default cases. This can increase recall for the default class, but it may discard useful information from the majority class.
 
 The model search compares full-distribution training with undersampled training. The current highest-F1 model was trained on the full training distribution, so the final selected model does not require undersampling.
 
 ```{r sample}
 set.seed(123)
 
-maj <- train %>% 
+maj <- train %>%
   filter(loan_default == "No")
-min <- train %>% 
+min <- train %>%
   filter(loan_default == "Yes")
 
-maj_under <- maj %>% 
+maj_under <- maj %>%
   sample_n(nrow(min))
 
 train_under <- bind_rows(min, maj_under) %>%
@@ -1871,195 +1871,367 @@ ________________________________________________________________________________
 saveRDS(hold, file.path(project_dir, 'holdout.rds'))
 ```
 
-## *Modeling*
-
-### Model Type: Regularized Logistic Regression
-_____________________________________________________________________________________________________________
-
-#### Model Package 
-
-The logistic regression model used was derived from the 
-
-#### Parameters
-
-
-
-#### Workflow
-
-
-#### Model Variants
-
-##### L1-Regularization Logistic Regression Model
-
-
-##### L2-Regularization Logistic Regression Model
-
-
-##### Elastic Net Regularization Logistic Regression Model
-
-
-#### Model Imports
-
-```{r modeling}
-
-```
-
-### Model Type: Decision Tree Classifier
-_____________________________________________________________________________________________________________
-
-#### Model Package 
-
-
-#### Parameters
-
-
-#### Workflow
-
-
-#### Model Variants
-
-
-#### Model Imports
-
-```{r modeling}
-
-```
-
-### Model Type: Random Forest Ensemble
-_____________________________________________________________________________________________________________
-
-#### Model Package 
-
-
-#### Parameters
-
-
-#### Workflow
-
-
-#### Model Variants
-
-
-#### Model Imports
-
-```{r modeling}
-
-```
-
-### Model Type: XGBoost Tree Ensemble
-_____________________________________________________________________________________________________________
-
-#### Model Package 
-
-
-#### Parameters
-
-
-#### Workflow
-
-
-#### Model Variants
-
-
-#### Model Imports
-
-```{r modeling}
-
-```
-
-### Model Type: LogBoost Tree Ensemble
-_____________________________________________________________________________________________________________
-
-#### Model Package 
-
-
-#### Parameters
-
-
-#### Workflow
-
-
-#### Model Variants
-
-
-#### Model Imports
-
-```{r modeling}
-
-```
-
-### Model Type: Neural Network
-_____________________________________________________________________________________________________________
-
-#### Model Package 
-
-
-#### Parameters
-
-
-#### Workflow
-
-
-#### Model Variants
-
-
-#### Model Imports
-
-```{r modeling}
-
-```
-
-### Evaluation
-_____________________________________________________________________________________________________________
+The procedures for producing the discussed models can be located in the `models` folder. The corresponding `html` and `rmd` model files can be found. The `html` files are the resulting files with output. While, the `rmd` files are the r chunks and the inputs with no outputs.
+
+Generally, the modeling workflow was as follows:
+
+1. Introduction
+2. Read in the Data
+3. Preview the Data
+4. Specialized Pre-Model Processing (if necessary)
+5. Set Up Model Parameters
+6. Build Model & Train on Training Dataset
+7. View Model Summary
+8. Predict on Holdout Dataset
+9. Create Table of Class and Probability Predictions
+10. Save Model & Results
+
+The models analyzed were logistic regression, decision trees, random forest ensembles, boosting ensembles, and neural networks. All models were segmented into full and balanced training datasets during the model construction.
 
 ---
 
 # **Results**
 
+## *Decision Tree*
 
-## *Model Comparison*
+### Derived Using Gini Impurity Measure
+____________________________________________________________________________________________________________
 
-**Table 1.** A table showing the best model-type for each different model variants considered and corresponding evaluation metrics, such as F1 score, accuracy, precision, balanced accuracy, sensitivity/recall, and AUC.
+#### Training Dataset
 
-| **Model Type** | **Model Parameters** | **Sample** | **F1 Score** | **AUC** | **Accuracy** | **Balanced Accuracy** | **Precision** | **Sensitivity/Recall** |
-|:---------------|:---------------------|:-----------|:-------------|:--------|:-------------|:---------------------|:---------------|:-----------------------|
-| dtc (gini)     |      | None |       |       |      |       |       |       |
-| dtc (entropy)  |      |  None     |       |       |      |       |       |       |
-| prunned dtc (gini) |      |  None     |       |       |      |       |       |       |
-| prunned dtc (entropy) |      |   None    |       |       |      |       |       |       |
-| cv dtc (gini) |      |    None   |       |       |      |       |       |       |
-| cv dtc (entropy) |      |   None    |       |       |      |       |       |       |
-| rf  |      |  None     |       |       |      |       |       |       |
-| rf (cv) |      |    None   |       |       |      |       |       |       |
-| logistic regression (L1)|      |  None     |       |       |      |       |       |       |
-| logistic regression (L2)|      |   None    |       |       |      |       |       |       |
-| logistic regression (Elastic Net) |       |   None   |       |       |       |      |       |       |       |
-| Neural Network (rf variable selection) |        | None     |       |       |       |      |       |       |       |
-| Neural Network (logistic regression variable selection) |      | None     |       |       |       |      |       |       |       |
-| dtc (gini)     |      | Balanced |       |       |      |       |       |       |
-| dtc (entropy)  |      |  Balanced     |       |       |      |       |       |       |
-| prunned dtc (gini) |      |  Balanced     |       |       |      |       |       |       |
-| prunned dtc (entropy) |      |   Balanced    |       |       |      |       |       |       |
-| cv dtc (gini) |      |    Balanced   |       |       |      |       |       |       |
-| cv dtc (entropy) |      |   Balanced    |       |       |      |       |       |       |
-| rf  |      |  Balanced     |       |       |      |       |       |       |
-| rf (cv) |      |    Balanced   |       |       |      |       |       |       |
-| logistic regression (L1)|      |  Balanced     |       |       |      |       |       |       |
-| logistic regression (L2)|      |   Balanced    |       |       |      |       |       |       |
-| logistic regression (Elastic Net) |       |   Balanced   |       |       |       |      |       |       |       |
-| Neural Network (rf variable selection) |        | Balanced     |       |       |       |      |       |       |       |
-| Neural Network (logistic regression variable selection) |      | Balanced     |       |       |       |      |       |       |       |
+```{r}
+gini_tree_results <- readRDS(file.path(project_dir, "gini_tree_results.rds"))
+print(gini_tree_results)
+```
 
+#### Undersampled Training Dataset
 
+```{r}
+gini_tree_us_results <- readRDS(file.path(project_dir, "gini_tree_us_results.rds"))
+print(gini_tree_us_results)
+```
+
+### Derived Using Entropy Index Impurity Measure
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+s_tree_results <- readRDS(file.path(project_dir, "entropy_tree_results.rds"))
+print(s_tree_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+s_tree_us_results <- readRDS(file.path(project_dir, "entropy_tree_us_results.rds"))
+print(s_tree_us_results)
+```
+
+### Derived Using Prunning With Cross Validation - Gini Index Impurity Measure
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+pruned_cv_gini_tree_results <- readRDS(file.path(project_dir, "pruned_cv_gini_tree_results.rds"))
+print(pruned_cv_gini_tree_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+pruned_cv_gini_tree_us_results <- readRDS(file.path(project_dir, "pruned_cv_gini_tree_us_results.rds"))
+print(pruned_cv_gini_tree_us_results)
+```
+
+### Derived Using Prunning With Cross Validation - Entropy Index Impurity Measure
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+pruned_cv_entropy_tree_results <- readRDS(file.path(project_dir, "pruned_cv_entropy_tree_results.rds"))
+print(pruned_cv_entropy_tree_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+pruned_cv_entropy_tree_us_results <- readRDS(file.path(project_dir, "pruned_cv_entropy_tree_results.rds"))
+print(pruned_cv_entropy_tree_us_results)
+```
+
+## *Random Forest Ensembles*
+
+### Derived Using randomForest - No Cross Validation
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+rf_results <- readRDS(file.path(project_dir, "rf_results.rds"))
+print(rf_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+rf_us_results <- readRDS(file.path(project_dir, "rf_us_results.rds"))
+print(rf_us_results)
+```
+
+### Derived Using Ranger - No Cross Validation
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+ranger_rf_results <- readRDS(file.path(project_dir, "ranger_rf_results.rds"))
+print(ranger_rf_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+ranger_rf_us_results <- readRDS(file.path(project_dir, "ranger_rf_us_results.rds"))
+print(ranger_rf_us_results)
+```
+
+### Derived Using randomForest - With Cross Validation
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+rf_cv_results <- readRDS(file.path(project_dir, "rf_cv_results.rds"))
+print(rf_cv_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+rf_cv_us_results <- readRDS(file.path(project_dir, "rf_cv_us_results.rds"))
+print(rf_cv_us_results)
+```
+
+### Derived Using Ranger - With Cross Validation
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+ranger_cv_results <- readRDS(file.path(project_dir, "ranger_cv_results.rds"))
+print(ranger_cv_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+ranger_cv_us_results <- readRDS(file.path(project_dir, "ranger_cv_us_results.rds"))
+print(ranger_cv_us_results)
+```
+
+## *Boosting Ensembles*
+
+### Derived From Shallow XGBoost
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+xgb_shallow_results <- readRDS(file.path(project_dir, "xgb_shallow_results.rds"))
+print(xgb_shallow_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+xgb_shallow_us_results <- readRDS(file.path(project_dir, "xgb_shallow_us_results.rds"))
+print(xgb_shallow_us_results)
+```
+
+### Derived From Medium XGBoost
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+xgb_medium_results <- readRDS(file.path(project_dir, "xgb_medium_results.rds"))
+print(xgb_medium_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+xgb_medium_us_results <- readRDS(file.path(project_dir, "xgb_medium_us_results.rds"))
+print(xgb_medium_us_results)
+```
+
+### Derived From Slow XGBoost
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+xgb_slow_results <- readRDS(file.path(project_dir, "xgb_slow_results.rds"))
+print(xgb_slow_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+xgb_slow_us_results <- readRDS(file.path(project_dir, "xgb_slow_us_results.rds"))
+print(xgb_slow_us_results)
+```
+
+### Derived From LogitBoost 50 Iterations
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+logitboost_50_results <- readRDS(file.path(project_dir, "logitboost_50_results.rds"))
+print(logitboost_50_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+logitboost_50_us_results <- readRDS(file.path(project_dir, "logitboost_50_us_results.rds"))
+print(logitboost_50_us_results)
+```
+
+### Derived From LogitBoost 100 Iterations
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+logitboost_100_results <- readRDS(file.path(project_dir, "logitboost_100_results.rds"))
+print(logitboost_100_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+logitboost_100_us_results <- readRDS(file.path(project_dir, "logitboost_100_us_results.rds"))
+print(logitboost_100_us_results)
+```
+
+## *Logistic Regression*
+
+### Derived From Lasso Regularization
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+log_lasso_results <- readRDS(file.path(project_dir, "log_lasso_results.rds"))
+print(log_lasso_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+log_lasso_us_results <- readRDS(file.path(project_dir, "log_lasso_undersampled_results.rds"))
+print(log_lasso_us_results)
+```
+
+### Derived From Ridge Regularization
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+log_ridge_results <- readRDS(file.path(project_dir, "log_ridge_results.rds"))
+print(log_ridge_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+log_ridge_us_results <- readRDS(file.path(project_dir, "log_ridge_undersampled_results.rds"))
+print(log_ridge_us_results)
+```
+
+### Derived From Elastic Net
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+log_elastic_results <- readRDS(file.path(project_dir, "log_elastic_results.rds"))
+print(log_elastic_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+log_elastic_us_results <- readRDS(file.path(project_dir, "log_elastic_undersampled_results.rds"))
+print(log_elastic_us_results)
+```
+
+## *Neural Network*
+
+### Derived From Lasso Selection
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+nn_logistic_results <- readRDS(file.path(project_dir, "nn_logistic_results.rds"))
+print(nn_logistic_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+nn_logistic_us_results <- readRDS(file.path(project_dir, "nn_logistic_us_results.rds"))
+print(nn_logistic_us_results)
+```
+
+### Derived From Random Forest Variable Importance
+____________________________________________________________________________________________________________
+
+#### Training Dataset
+
+```{r}
+nn_rf_results <- readRDS(file.path(project_dir, "nn_rf_results.rds"))
+print(nn_rf_results)
+```
+
+#### Undersampled Training Dataset
+
+```{r}
+nn_rf_us_results <- readRDS(file.path(project_dir, "nn_rf_us_results.rds"))
+print(nn_rf_us_results)
+```
 
 ---
 
 # **Discussion**
 
+The models showed a consistent tradeoff between performance on the full training dataset and performance on the undersampled training dataset. In general, models trained on the full dataset tended to produce higher accuracy, precision, and specificity, meaning they were better at correctly identifying non-default cases and avoiding false positives. However, the undersampled models usually produced higher sensitivity/recall and balanced accuracy, meaning they were better at detecting loan defaults. This pattern is expected in an imbalanced classification problem because the full dataset contains many more non-default observations, while undersampling forces the model to learn more directly from the minority default class.
+
+For the decision tree models, the full training dataset produced stronger F1 scores, while the undersampled training dataset improved recall and balanced accuracy. The full Gini decision tree achieved an accuracy of 0.916, precision of 0.850, sensitivity of 0.697, specificity of 0.970, F1 score of 0.766, and AUC of 0.925. The undersampled Gini tree lowered accuracy to 0.878 and precision to 0.640, but sensitivity increased sharply to 0.865 and balanced accuracy improved from 0.833 to 0.873. The same pattern appeared for the entropy tree: the full model had a higher F1 score of 0.766, while the undersampled model improved sensitivity from 0.698 to 0.863 and AUC from 0.926 to 0.944. The cross-validated Gini tree followed this trend as well, with the undersampled version reaching the highest decision-tree balanced accuracy of 0.874 and sensitivity of 0.873, but with a lower F1 score of 0.732 compared with 0.766 for the full model. Overall, the decision trees trained on the full data were better if precision and F1 score were prioritized, while the undersampled trees were better if the primary goal was to identify as many default cases as possible. One note is that the cross-validated entropy undersampled result appears to load the same RDS file as the full cross-validated entropy model, so that comparison should be checked before making a final claim about that specific model.
+
+For the random forest models, undersampling again improved recall but reduced precision and overall F1 score. The basic `randomForest` model trained on the full dataset achieved accuracy of 0.909, precision of 0.893, specificity of 0.982, and F1 score of 0.725, but sensitivity was only 0.610. The undersampled version increased sensitivity to 0.858 and balanced accuracy to 0.859, but precision dropped to 0.601 and F1 score declined slightly to 0.707. The `ranger` random forest showed nearly the same pattern: the full model had precision of 0.897 and specificity of 0.983, while the undersampled model had much higher sensitivity of 0.848 but lower precision of 0.597. Cross-validation improved the full random forest model, especially for F1 score. The cross-validated `randomForest` model trained on the full dataset had the best random forest F1 score at 0.750, with accuracy of 0.914, precision of 0.871, sensitivity of 0.659, specificity of 0.976, and AUC of 0.938. The cross-validated undersampled models still performed better on recall, but their lower precision kept their F1 scores below the full cross-validated model. Therefore, the best random forest model was the full-data cross-validated `randomForest` model.
+
+The boosting models showed the strongest overall performance, especially the XGBoost models trained on undersampled data. The full XGBoost models were extremely conservative in predicting default. For example, the shallow XGBoost model trained on the full dataset had very high precision of 0.995 and specificity of 0.999, but sensitivity was only 0.479, meaning it missed many actual default cases. The undersampled shallow XGBoost model was more balanced, increasing sensitivity to 0.722 and F1 score to 0.743 while still keeping specificity high at 0.946. The medium XGBoost model was the strongest boosting model. Its full-data version had AUC of 0.951 and precision of 0.988, but sensitivity was only 0.503. After undersampling, the medium XGBoost model improved sensitivity to 0.757, balanced accuracy to 0.854, and F1 score to 0.773, while maintaining strong accuracy of 0.913, precision of 0.791, specificity of 0.951, and AUC of 0.952. The slow XGBoost model also benefited from undersampling, increasing F1 score from 0.644 to 0.754 and sensitivity from 0.476 to 0.766. However, it did not outperform the medium XGBoost model. The LogitBoost models were weaker overall. The full LogitBoost 100 model had sensitivity of 0.755 but only an F1 score of 0.663 and AUC of 0.891, while the undersampled LogitBoost 100 model had very high precision and specificity but very poor sensitivity of 0.331. Overall, the best boosting model was the undersampled medium XGBoost model.
+The logistic regression models were stable but less competitive than the tree-based ensemble methods. Lasso, ridge, and elastic net all produced similar results, and the undersampled versions were identical to the full versions in the reported output. The lasso model had accuracy of 0.897, precision of 0.930, sensitivity of 0.516, specificity of 0.991, F1 score of 0.664, and AUC of 0.923. Ridge regression was slightly more conservative, with higher precision of 0.962 and specificity of 0.995, but lower sensitivity of 0.497 and F1 score of 0.655. Elastic net was the best logistic regression model by F1 score, with accuracy of 0.897, precision of 0.926, sensitivity of 0.518, specificity of 0.990, F1 score of 0.665, and AUC of 0.923. These results suggest that the logistic models were good at identifying low-risk non-default cases, but they were not flexible enough to capture many of the default cases.
+
+The neural network models performed well, especially the model using variables selected from lasso logistic regression. The full neural network with lasso-selected variables achieved accuracy of 0.913, balanced accuracy of 0.831, precision of 0.834, sensitivity of 0.695, specificity of 0.966, F1 score of 0.758, and AUC of 0.948. The undersampled version improved sensitivity to 0.845 and balanced accuracy to 0.855, but precision dropped to 0.605 and F1 score declined to 0.705. The neural network using random forest variable importance was weaker. Its full-data version had an F1 score of 0.682 and AUC of 0.916, while the undersampled version improved sensitivity to 0.824 but only reached an F1 score of 0.694. This suggests that the lasso-selected variables created a cleaner feature set for the neural network than the random-forest-selected variables. Overall, the best neural network was the full-data neural network using lasso logistic regression variable selection.
+Comparing the best model from each class, the best decision tree model was the full-data entropy decision tree, with an F1 score of 0.766 and AUC of 0.926. The best random forest model was the full-data cross-validated randomForest model, with an F1 score of 0.750 and AUC of 0.938. The best boosting model was the undersampled medium XGBoost model, with an F1 score of 0.773 and AUC of 0.952. The best logistic regression model was elastic net, with an F1 score of 0.665 and AUC of 0.923. The best neural network was the full-data lasso-selected neural network, with an F1 score of 0.758 and AUC of 0.948. Based on these comparisons, the best overall model was the undersampled medium XGBoost model. It had the highest F1 score among all models, tied or exceeded the strongest AUC values, and provided the best balance between correctly identifying defaults and avoiding excessive false positives.
+
+A likely reason the best model came from the XGBoost class is that loan default prediction contains complex, nonlinear relationships and interactions among borrower characteristics, loan attributes, and risk indicators. Logistic regression can only model these relationships in a mostly linear way, and a single decision tree can be too simple or unstable. Random forests improve stability by averaging many trees, but boosting can be especially effective because each new tree focuses on errors made by the previous trees. The undersampled medium XGBoost model likely performed well because undersampling gave the model more opportunity to learn the minority default class, while the medium-depth boosted trees were flexible enough to capture interactions without becoming as conservative as the full-data XGBoost models. This produced a model that maintained strong specificity and AUC while substantially improving sensitivity and F1 score, making it the strongest option for predicting loan default.
+
 ---
 
 # **Conclusion**
 
----
+Overall, the modeling results show that the best-performing approach for predicting loan default was the undersampled medium XGBoost model. This model provided the strongest overall balance between predictive accuracy, default detection, and false-positive control. While several full-data models achieved very high precision and specificity, they often missed a larger share of actual default cases. In contrast, the undersampled medium XGBoost model improved sensitivity while still maintaining strong accuracy, precision, specificity, F1 score, and AUC.
 
-# **References**
+The results also show that undersampling was useful for models that needed better recognition of the minority default class. Across many model classes, undersampled models increased sensitivity and balanced accuracy, though often at the cost of lower precision. This tradeoff is important in loan default prediction because failing to identify a likely default can be more costly than incorrectly flagging a lower-risk applicant for additional review. For that reason, a model with a strong balance between sensitivity and precision is more useful than a model that only maximizes overall accuracy.
+
+Based on the full comparison, the undersampled medium XGBoost model is recommended as the final model. Its performance suggests that boosted tree methods are well suited for this problem because they can capture nonlinear patterns, interactions, and risk signals that simpler models may miss. In a practical lending context, this model could support risk screening by identifying applicants with higher default likelihood while still preserving enough specificity to avoid excessive false alarms.
