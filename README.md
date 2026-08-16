@@ -1,6 +1,6 @@
 # Data Science Portfolio
 
-This repository contains a project-based portfolio of graduate-level analytics, machine learning, data mining, and optimization work. The projects emphasize the full analytical workflow: problem framing, data preparation, modeling, evaluation, interpretation, and communication of business recommendations.
+This repository contains a project-based portfolio of graduate-level analytics, machine learning, data mining, optimization, and applied software product work. The projects emphasize the full workflow from problem framing and data preparation through modeling, evaluation, interpretation, communication, and deployment-oriented implementation.
 
 The portfolio is organized by project area first, then by individual project. Each project README explains the objective, methods, files, data availability, and recommended review path.
 
@@ -11,6 +11,7 @@ The portfolio is organized by project area first, then by individual project. Ea
 | Machine Learning | [`machine_learning`](machine_learning) | Supervised learning, unsupervised learning, transfer learning, anomaly detection, predictive modeling, and model comparison. |
 | Big Data | [`big_data`](big_data) | API data collection, NoSQL querying, text mining, feature engineering, and Python-based machine learning workflows. |
 | Optimization | [`optimization`](optimization) | Integer programming and scenario analysis for NFL expansion site selection. |
+| Software Products | [`software_products`](software_products) | Domain-specific applications that combine backend services, frontend interfaces, local-first data workflows, testing, and packaging. |
 
 ## Featured Projects
 
@@ -23,6 +24,7 @@ The portfolio is organized by project area first, then by individual project. Ea
 | Electricity Tariff and Consumption Modeling | Machine Learning | Regression modeling, feature preparation, tree models, random forests | [`machine_learning/tariff_prediction`](machine_learning/tariff_prediction) |
 | Big Data and Data Mining | Big Data | APIs, MongoDB aggregation, NLP, sentiment analysis, TF-IDF, classification | [`big_data`](big_data) |
 | NFL Expansion Optimization | Optimization | Binary integer programming, coverage modeling, threshold sensitivity analysis | [`optimization`](optimization) |
+| ChemPulse | Software Products | Local-first chemical intelligence, Python backend, Reflex frontend, DuckDB-style data access, chemistry services, synthetic data generation, desktop packaging | [`software_products/chempulse`](software_products/chempulse) |
 
 ## Tools and Languages
 
@@ -30,6 +32,7 @@ The portfolio is organized by project area first, then by individual project. Ea
 - R, R Markdown, tidyverse, caret, rpart, randomForest, xgboost, neural network tooling
 - MongoDB and API-based data collection
 - Gurobi optimization and integer programming
+- Reflex, FastAPI/ASGI-style services, DuckDB-style local data workflows, and desktop packaging scripts
 - Model evaluation metrics including accuracy, precision, recall, F1 score, AUC, RMSE, reconstruction error, and sensitivity analysis
 
 ## Data Availability
@@ -45,6 +48,7 @@ Each project README explains what is included, what data is required to rerun th
 3. Review [`machine_learning/fraud_anomaly_detection`](machine_learning/fraud_anomaly_detection) and [`machine_learning/image_classification_transfer_learning`](machine_learning/image_classification_transfer_learning) for applied neural network projects.
 4. Review [`big_data`](big_data) for data acquisition, database, and text mining workflows.
 5. Review [`optimization`](optimization) for mathematical modeling and decision optimization.
+6. Review [`software_products/chempulse`](software_products/chempulse) for a domain-specific scientific software product with backend, frontend, testing, synthetic data, and packaging components.
 
 ## Repository Structure
 
@@ -58,5 +62,7 @@ Each project README explains what is included, what data is required to rerun th
 |   |-- loan_default_prediction
 |   |-- lyrics_clustering
 |   `-- tariff_prediction
-`-- optimization
+|-- optimization
+`-- software_products
+    `-- chempulse
 ```
