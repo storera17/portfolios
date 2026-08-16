@@ -1,5 +1,7 @@
 # MomentumProdigy
 
+![MomentumProdigy local profile screen](assets/momentum-prodigy-entry.png)
+
 MomentumProdigy is an offline-first mastery-learning platform for turning
 structured course material into guided lessons, adaptive review, searchable
 knowledge, and targeted practice. The goal is simple: help learners spend less
@@ -10,7 +12,19 @@ project: the product is split into a frontend and backend, the learning logic is
 tested, public demo content is safe to inspect, and the code includes
 reader-facing commentary for people who are still learning how the system works.
 
-## What This Repository Demonstrates
+## Objective
+
+Turn structured course material into an offline study system with guided lessons,
+adaptive review, local search, tutor-style explanations, and practice generation.
+
+## Stack
+
+- React, TypeScript, Vite, and Vitest
+- Local browser storage for profile, settings, progress, review logs, and practice cards
+- Node-based content pipeline for course, worksheet, and demo-data generation
+- Tauri desktop shell and Capacitor iOS sync path
+
+## Key Features
 
 - A deterministic content pipeline instead of manually maintained cards.
 - An original SM-2-family spaced-repetition scheduler.
@@ -22,6 +36,20 @@ reader-facing commentary for people who are still learning how the system works.
   generation.
 
 Runtime learning features do not require network access.
+
+## How To Review
+
+1. Start with the screenshot above to understand the local-first entry flow.
+2. Review `backend/src/core/engine.ts`, `backend/src/core/scheduler.ts`, `backend/src/core/mastery.ts`, and `backend/src/core/store.ts` for the learning system.
+3. Review `backend/content-pipeline/` for the course and worksheet generation workflow.
+4. Review `frontend/src/ui/` and `frontend/src/app/` for the app shell and learner-facing screens.
+5. From `frontend/`, run `npm test` and `npm run build` to verify the project.
+
+## What I Personally Built
+
+- The offline-first learning product concept, app shell, visible screens, and local profile/progress behavior.
+- The course-generation pipeline, demo content structure, worksheet generation path, and reviewer-safe public content organization.
+- The spaced-repetition scheduler, mastery/readiness thresholds, search/tutor behavior, tests, and desktop/mobile packaging paths.
 
 ## Repository Layout
 
@@ -49,7 +77,7 @@ MomentumProdigy-GitHub/
 The root intentionally contains only `README.md`, `frontend/`, and `backend/`.
 That shallow structure makes the application boundary obvious to reviewers.
 
-## Run Locally
+## Run And Verify
 
 Requirements: Node.js 18 or newer and npm.
 

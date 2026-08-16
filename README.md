@@ -4,6 +4,10 @@ This repository contains a project-based portfolio of graduate-level analytics, 
 
 The portfolio is organized by project area first, then by individual project. Each project README explains the objective, methods, files, data availability, and recommended review path.
 
+## Featured Portfolio Path
+
+[`Loan Default Prediction`](machine_learning/loan_default_prediction) → [`ChemPulse`](software_products/chempulse) → [`MomentumProdigy`](software_products/momentum_prodigy) → [`Optimization`](optimization)
+
 ## Portfolio Areas
 
 | Area | Folder | Focus |
@@ -33,7 +37,7 @@ The portfolio is organized by project area first, then by individual project. Ea
 - R, R Markdown, tidyverse, caret, rpart, randomForest, xgboost, neural network tooling
 - MongoDB and API-based data collection
 - Gurobi optimization and integer programming
-- Reflex, FastAPI/ASGI-style services, DuckDB-style local data workflows, React/TypeScript, Vite, Tauri, Capacitor, and desktop/mobile packaging scripts
+- Reflex, Starlette/ASGI-style services, DuckDB-style local data workflows, React/TypeScript, Vite, Tauri, Capacitor, and desktop/mobile packaging scripts
 - Model evaluation metrics including accuracy, precision, recall, F1 score, AUC, RMSE, reconstruction error, and sensitivity analysis
 
 ## Data Availability

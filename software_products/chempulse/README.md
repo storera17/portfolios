@@ -1,6 +1,41 @@
 # ChemPulse
 
-ChemPulse is a local-first chemical intelligence product split into a Reflex frontend, a Python backend, and an optional desktop launcher. The repository is now organized around the only application layers needed to run, test, bundle, and ship the product.
+![ChemPulse mobile companion screenshot](assets/chempulse-mobile-dashboard.png)
+
+ChemPulse is a local-first chemical intelligence product split into a Reflex frontend, a Python backend, and optional desktop/mobile access. It is organized around the application layers needed to run, test, bundle, and ship the product.
+
+## Objective
+
+Build a reviewer-ready chemistry workspace for literature search, scaffold and reaction exploration, evidence-backed mechanism notes, compliant source-pricing workflows, and local data review without depending on a cloud service.
+
+## Stack
+
+- Python, Reflex, Starlette, Uvicorn
+- DuckDB-backed local storage and synthetic dataset generation
+- RDKit chemistry utilities
+- Plotly-ready analytical outputs
+- PowerShell/Python packaging scripts for frontend, backend, desktop, and installer workflows
+
+## Key Features
+
+- Local chemical-intelligence UI for topic, structure, reaction, mechanism, report, and pricing workflows.
+- Backend APIs for search, data access, reports, plugins, integrations, and chemistry services.
+- Mobile companion page for database status, publication radar, and DOI/article import.
+- Synthetic 1M-row dataset generator for scale testing without redistributing private data.
+- Desktop launcher and build scripts for deployable Windows/macOS-oriented packaging paths.
+
+## How To Review
+
+1. Start with the screenshot above to understand the companion product surface.
+2. Review `frontend/ui/assets/chemical_intelligence_markup.html` and `frontend/ui/assets/chemical_intelligence_script.js` for the main chemical-intelligence workspace.
+3. Review `backend/chemistry/`, `backend/search/`, `backend/reports/`, and `backend/data/` for the core product logic.
+4. Run the verification commands below if you want to check the Python app structure and tests.
+
+## What I Personally Built
+
+- The local-first product architecture across frontend entrypoints, backend services, storage, and desktop/mobile access.
+- The chemical-intelligence workflows for literature, structure, reaction, mechanism, report, and source-pricing review.
+- The synthetic-data path, packaging scripts, environment handling, and verification checklist needed to evaluate the project as a software product.
 
 ## Repository Layout
 
@@ -62,7 +97,7 @@ Writable storage defaults to:
 
 Override storage anywhere with `CHEMPULSE_STORAGE_DIR`.
 
-## Install
+## Install And Run
 
 ### Windows
 
@@ -79,8 +114,6 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirement/base.txt -r requirement/frontend.txt -r requirement/backend.txt -r requirement/dev.txt
 ```
-
-## Run
 
 ### Full Reflex app
 
@@ -102,10 +135,11 @@ python -m uvicorn backend_app:app --host 127.0.0.1 --port 8000
 python desktop_app.py
 ```
 
-## Test
+## Test And Verify
 
 ```bash
 pytest -q backend/tests frontend/tests
+python -m compileall -q app.py backend_app.py desktop_app.py backend frontend
 ```
 
 The test suite is split by responsibility:
@@ -186,10 +220,3 @@ Common environment variables:
 - `CHEMPULSE_DEPLOY_URL`
 - `CHEMPULSE_STORAGE_DIR`
 - `CHEMPULSE_MOBILE_ACCESS_ENABLED`
-
-## Verification Checklist
-
-```bash
-python -m compileall -q app.py backend_app.py desktop_app.py backend frontend
-pytest -q backend/tests frontend/tests
-```
