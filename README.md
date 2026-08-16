@@ -1,10 +1,10 @@
-# Data Science Portfolio
+# **Data Science Portfolio**
 
 This repository contains a collection of graduate-level analytics, machine learning, optimization, and data mining projects. The portfolio is organized by project area, with each folder containing notebooks, reports, code, and supporting documentation for a specific body of work.
 
 The projects emphasize practical analytical workflows: data preparation, modeling, evaluation, interpretation, and communication of results.
 
-## Portfolio Areas
+## *Portfolio Areas*
 
 | Area | Folder | Description |
 | --- | --- | --- |
@@ -13,7 +13,7 @@ The projects emphasize practical analytical workflows: data preparation, modelin
 | Optimization | [`optimization_portfolio`](optimization_portfolio) | Integer programming and optimization modeling applied to NFL expansion site selection. |
 | Experimental Design | `experimental_design` | Planned section for experimental design, statistical testing, and related R-based analysis projects. |
 
-## Highlighted Projects
+## *Highlighted Projects*
 
 ### Loan Default Prediction
 
@@ -39,7 +39,7 @@ An optimization project using binary integer programming to evaluate possible NF
 
 Location: [`optimization_portfolio`](optimization_portfolio)
 
-## Tools and Languages
+## *Tools and Languages*
 
 This portfolio includes work in:
 
@@ -53,13 +53,13 @@ This portfolio includes work in:
 - Gurobi optimization
 - matplotlib, seaborn, and related visualization tools
 
-## Data Notes
+## *Data Notes*
 
 Large raw datasets are generally not included in this repository. When data files are required to reproduce an analysis, the project README explains the expected data source, file structure, or local path adjustments needed to run the notebook or report.
 
 This approach keeps the repository lightweight while preserving the code, methodology, results, and interpretation needed for portfolio review.
 
-## Suggested Review Order
+## *Suggested Review Order*
 
 1. Start with the root README to understand the portfolio structure.
 2. Review each folder-level README for project summaries.
