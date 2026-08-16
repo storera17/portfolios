@@ -1,126 +1,76 @@
-# NFL Expansion Optimization Portfolio
+# NFL Expansion Optimization
 
-This project uses binary integer programming to study where future NFL franchises could be placed across a network of candidate cities. The model treats each city as a node in a coverage graph and searches for the smallest set of selected franchise locations that can cover all viable markets while satisfying demographic, economic, geographic, and budget constraints.
+This project uses binary integer programming to evaluate potential NFL expansion locations across a network of candidate cities. The model treats cities as nodes in a coverage graph and selects the smallest feasible set of franchise locations that can cover the candidate market network while satisfying demographic, economic, geographic, and budget constraints.
 
-The main analysis is contained in `nfl_modeling.ipynb`. It combines a written project report, data preprocessing, a Gurobi optimization model, threshold sensitivity analysis, and map-based visualization of selected expansion sites.
+## Project Objective
 
-## Project Goal
+The goal is to support strategic expansion planning by comparing where future NFL franchises could be placed under different feasibility assumptions. The model balances market quality, geographic coverage, and capital requirements.
 
-The model frames NFL expansion as a constrained minimum dominating set problem:
+## Methods
 
-- Candidate cities are filtered using population/demographic criteria and economic/value criteria.
-- Pairwise city coverage is determined using great-circle distance.
-- A binary decision variable indicates whether a city is selected for a franchise.
-- The objective minimizes the number of selected cities needed to cover the full candidate network.
-- Constraints enforce feasibility filters, market coverage, budget limits, and optional market separation rules.
-
-This structure is useful for comparing expansion scenarios where the league must balance market quality, geographic coverage, and capital requirements.
+- Candidate city filtering using population, demographic, economic, and feasibility criteria
+- Great-circle distance calculations using the Haversine formula
+- Binary decision variables for selected franchise locations
+- Minimum dominating set style coverage formulation
+- Budget and feasibility constraints
+- Threshold sensitivity analysis across population and economic criteria
 
 ## Repository Contents
 
 ```text
 .
-├── README.md
-├── nfl_modeling.ipynb
-└── data
-    ├── cities.csv
-    ├── theta_lambda_sensitivity.csv
-    └── theta_lambda_best_solution .csv
+|-- README.md
+|-- nfl_modeling.ipynb
+`-- data
+    |-- cities.csv
+    |-- theta_lambda_best_solution .csv
+    `-- theta_lambda_sensitivity.csv
 ```
 
 ## Data Files
 
-`data/cities.csv` is the source city dataset. It includes city names, IDs, coordinates, estimated budget/cost values, population filter flags, economic filter flags, geographic feasibility flags, and segmentation fields.
-
-`data/theta_lambda_sensitivity.csv` stores the threshold sweep results. Each row reports one population-threshold and economic-threshold combination, the number of eligible candidate cities, solver status, selected city count, total cost, and selected city IDs.
-
-`data/theta_lambda_best_solution .csv` stores the modeled solution by city. It contains the cleaned numeric coordinate and budget fields, candidate-set membership, segmentation, and a `selected` flag indicating whether each city appears in the final solution. Note that this filename currently contains a space before `.csv`.
-
-## Model Summary
-
-The notebook implements the following workflow:
-
-1. Load and clean the city dataset.
-2. Convert coordinate and currency fields into numeric values.
-3. Detect population filter columns and economic filter columns.
-4. Build a distance-based adjacency matrix using the Haversine formula.
-5. Run a Gurobi binary integer programming model for each tested threshold pair.
-6. Save sensitivity results and the best solution.
-7. Generate a coverage map showing selected cities and covered markets.
-
-Important notebook settings include:
-
-- Coverage radius: `150` miles
-- Global budget factor: `0.75` times the sum of candidate city costs
-- Solver time limit: `30` seconds per run
-- Population threshold sweep: `1, 2, 3, 4`
-- Economic threshold sweep: `1, 2, 3, 4`
+| File | Description |
+| --- | --- |
+| [`data/cities.csv`](data/cities.csv) | Candidate city dataset with city identifiers, coordinates, budget estimates, feasibility flags, and segmentation fields. |
+| [`data/theta_lambda_sensitivity.csv`](data/theta_lambda_sensitivity.csv) | Threshold sweep results showing feasible and infeasible population/economic combinations. |
+| [`data/theta_lambda_best_solution .csv`](data/theta_lambda_best_solution%20.csv) | Final modeled solution by city, including candidate-set membership and selected-site indicators. |
 
 ## Key Results
 
-The included solution files show:
+The included results show:
 
 - 174 modeled city markets
-- 71 selected franchise locations in the feasible solutions
+- 71 selected franchise locations in feasible scenarios
 - 4 feasible threshold combinations
-- 12 threshold combinations where coverage is impossible
-- Total selected-site cost of approximately `$337.1B` for the feasible runs
+- 12 threshold combinations where full coverage is impossible
+- Approximate selected-site cost of `$337.1B` for feasible runs
 
-The feasible threshold combinations are:
-
-| Population threshold | Economic threshold | Candidate cities | Selected cities |
-| --- | --- | ---: | ---: |
+| Population Threshold | Economic Threshold | Candidate Cities | Selected Cities |
+| ---: | ---: | ---: | ---: |
 | 1 | 1 | 174 | 71 |
 | 1 | 2 | 173 | 71 |
 | 2 | 1 | 173 | 71 |
 | 2 | 2 | 173 | 71 |
 
-When either threshold rises to 3 or 4, the filtered candidate set can no longer cover the full network under the 150-mile radius assumption.
+When either threshold rises to 3 or 4, the filtered candidate set can no longer cover the full network under the 150-mile coverage radius assumption.
 
 ## Requirements
 
-The notebook uses Python 3 and the following main packages:
+The notebook uses Python 3 and the following core packages:
 
-- `pandas`
-- `numpy`
-- `gurobipy`
-- `matplotlib`
-- `cartopy`
-- `adjustText`
+- pandas
+- NumPy
+- gurobipy
+- matplotlib
+- cartopy
+- adjustText
 
-Gurobi requires a working installation and license. Academic licenses are available from Gurobi for eligible users.
+Gurobi requires a valid local installation and license.
 
-## Running the Notebook
+## How to Review
 
-Open `nfl_modeling.ipynb` in Jupyter Notebook, JupyterLab, or VS Code.
+Open [`nfl_modeling.ipynb`](nfl_modeling.ipynb) to review the full optimization workflow. The included CSV files allow reviewers to inspect the input data, threshold sensitivity results, and final modeled solution without rerunning the optimization model.
 
-Before running the model, update the `ROOT_DRIVE` setting in the notebook so it points to this project folder or directly to the `data` folder. The notebook currently uses an absolute path from the original author environment.
+## Reproducibility Notes
 
-For this local copy, either of these patterns will work:
-
-```python
-ROOT_DRIVE = "/Users/andystorer/Desktop/optimization_portfolio"
-```
-
-or:
-
-```python
-ROOT_DRIVE = "/Users/andystorer/Desktop/optimization_portfolio/data"
-```
-
-If `ROOT_DRIVE` points to the project root, the notebook will find `data/cities.csv` recursively, but new output files will be written to the project root. If `ROOT_DRIVE` points to `data`, outputs will be written beside the existing CSV files.
-
-## Expected Outputs
-
-When the notebook runs successfully, it creates:
-
-- `theta_lambda_sensitivity.csv`
-- `theta_lambda_best_solution.csv`
-- `nfl_expansion_coverage_map.png`
-
-The current repository includes the sensitivity CSV and solution CSV under `data`. The generated coverage map is referenced by the notebook but is not currently included in this folder.
-
-## Authors
-
-Jake Borders, Henry Fladung, Astin Lin, Dhritik Manchaiah, James Sherman, and Andrew Storer.
-
+The notebook may require local path updates before rerunning. If rerunning the model, update the notebook path settings so they point to this project folder or the `data` folder.
