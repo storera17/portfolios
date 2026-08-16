@@ -1,26 +1,29 @@
 # Big Data Portfolio
 
-This repository contains a small portfolio of Python notebooks focused on data mining, machine learning, API collection, text analytics, and NoSQL querying. Each notebook demonstrates a different part of the analytics workflow: connecting to data sources, preparing data, engineering features, building models, evaluating results, and visualizing findings.
+A concise portfolio of Jupyter notebooks demonstrating practical data mining workflows with Python. The projects cover API-based data collection, MongoDB aggregation, natural language processing, feature engineering, supervised machine learning, and data visualization.
 
-## Portfolio Projects
+This repository is designed for portfolio review: each notebook highlights a different part of the analytics workflow, from collecting and preparing data to modeling, evaluation, and communicating results.
 
-| Notebook | Topic | What it demonstrates |
+## Portfolio Overview
+
+| Notebook | Focus Area | What It Demonstrates |
 | --- | --- | --- |
-| `api_data_mining.ipynb` | API data mining | Uses the New York Times Article Search API to measure the number of articles mentioning Cincinnati from 2010 through 2019, then plots the yearly trend. |
-| `NoSQL_data_mining.ipynb` | MongoDB / NoSQL analysis | Connects to a MongoDB movies collection and uses aggregation pipelines to analyze romance movie budgets, average yearly ratings, and drama movie production cost per minute. |
-| `text_mining_ml.ipynb` | Text mining and machine learning | Applies sentiment scoring and TF-IDF text features to Yelp review data, then trains Random Forest classifiers to predict review class. |
-| `predicting_tariff.ipynb` | Predictive modeling | Builds regression and classification models for electricity customer behavior, including Linear Regression, Decision Tree, Random Forest, and cross-validated model tuning. |
+| [`api_data_mining.ipynb`](api_data_mining.ipynb) | API data mining | Collects yearly New York Times article counts for "Cincinnati" from 2010-2019, handles rate limits, stores results in a dataframe, and visualizes the trend. |
+| [`NoSQL_data_mining.ipynb`](NoSQL_data_mining.ipynb) | NoSQL / MongoDB analytics | Connects to a MongoDB movies collection and uses aggregation pipelines to answer analytical questions about movie budgets, ratings, genres, release years, and cost per minute. |
+| [`text_mining_ml.ipynb`](text_mining_ml.ipynb) | Text mining and machine learning | Uses Yelp review text to create sentiment and TF-IDF features, then trains Random Forest classifiers for review classification. |
 
-## Skills Highlighted
+## Skills Demonstrated
 
 - Python data analysis with `pandas`
-- API requests with `requests`
-- MongoDB aggregation pipelines with `pymongo`
-- Text preprocessing with `nltk`
+- API requests and response handling with `requests`
+- Rate-limit-aware data collection
+- MongoDB querying and aggregation pipelines
+- Text cleaning, tokenization, stop-word removal, and stemming with `nltk`
 - Sentiment analysis with VADER
-- TF-IDF feature engineering with `scikit-learn`
-- Regression, classification, train/test splits, model evaluation, and grid search
-- Time series visualization with `matplotlib`
+- TF-IDF vectorization with `scikit-learn`
+- Train/test splitting, classification modeling, and accuracy reporting
+- Data visualization with `matplotlib`
+- Notebook-based analytical storytelling
 
 ## Repository Structure
 
@@ -29,50 +32,27 @@ This repository contains a small portfolio of Python notebooks focused on data m
 |-- README.md
 |-- NoSQL_data_mining.ipynb
 |-- api_data_mining.ipynb
-|-- predicting_tariff.ipynb
 `-- text_mining_ml.ipynb
 ```
-
-## Setup
-
-These notebooks were created with Python 3.12. To run them locally, create a virtual environment and install the main dependencies:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install jupyter pandas matplotlib requests pymongo nltk scikit-learn
-```
-
-Then start Jupyter:
-
-```bash
-jupyter notebook
-```
-
-## Data and Credentials
-
-Some source data and credentials are not included in this repository. Before running every notebook end to end, make sure the required inputs are available:
-
-| Notebook | Required input |
-| --- | --- |
-| `api_data_mining.ipynb` | A New York Times Article Search API key. Replace `[INSERT_API_KEY]` in the notebook before running. |
-| `NoSQL_data_mining.ipynb` | Access to the MongoDB server, database, and `movies` collection used in the notebook. |
-| `text_mining_ml.ipynb` | A Yelp review CSV file with review text and class labels. The notebook currently references a local file path that should be updated for your machine. |
-| `predicting_tariff.ipynb` | `energy_data.csv`, containing customer demographics, usage behavior, annual consumption, and tariff labels. |
-
-The text mining notebook also downloads NLTK resources such as `stopwords` and `punkt` during execution.
 
 ## Notebook Summaries
 
 ### API Data Mining
 
-`api_data_mining.ipynb` queries the New York Times Article Search API for articles that mention "Cincinnati" across each year from 2010 to 2019. The notebook stores yearly article counts in a dataframe and visualizes the result as a line chart.
+[`api_data_mining.ipynb`](api_data_mining.ipynb) uses the New York Times Article Search API to estimate the yearly visibility of Cincinnati in NYT coverage from 2010 through 2019.
 
-Saved output shows the count declining from 1,018 articles in 2010 to 462 articles in 2019.
+The notebook:
+
+- Queries the API once per year using date-bounded search parameters
+- Includes a delay and retry path for rate-limit responses
+- Stores article counts in a `pandas` dataframe
+- Plots article count trends over time
+
+Saved notebook output shows article counts declining from 1,018 in 2010 to 462 in 2019.
 
 ### NoSQL Data Mining
 
-`NoSQL_data_mining.ipynb` works with a MongoDB movies collection. It demonstrates aggregation pipeline stages including `$match`, `$project`, `$sort`, `$group`, and `$limit`.
+[`NoSQL_data_mining.ipynb`](NoSQL_data_mining.ipynb) analyzes a MongoDB movies collection with aggregation pipelines.
 
 The notebook answers questions such as:
 
@@ -80,34 +60,84 @@ The notebook answers questions such as:
 - How does average movie rating change by release year?
 - Which drama movies have the highest production cost per minute?
 
+It demonstrates MongoDB stages such as `$match`, `$project`, `$group`, `$sort`, and `$limit`, along with type conversion for numeric calculations.
+
 ### Text Mining and Machine Learning
 
-`text_mining_ml.ipynb` uses Yelp review text to build classification features from sentiment scores and normalized TF-IDF vectors. It cleans text by tokenizing, removing punctuation and numbers, lowercasing, removing stop words, and stemming.
+[`text_mining_ml.ipynb`](text_mining_ml.ipynb) builds a text classification workflow using Yelp review data.
 
-The notebook compares Random Forest models trained on:
+The notebook:
 
-- Individual sentiment scores
-- TF-IDF features
-- Combined TF-IDF and sentiment features
+- Loads review text and class labels from a CSV file
+- Generates VADER positive, negative, neutral, and compound sentiment scores
+- Cleans text through tokenization, punctuation removal, lowercasing, stop-word removal, and stemming
+- Converts cleaned review text into normalized TF-IDF features
+- Trains Random Forest classifiers using sentiment features, TF-IDF features, and combined feature sets
+- Reports accuracy and classification metrics
 
-### Predicting Electricity Tariff
+## Getting Started
 
-`predicting_tariff.ipynb` uses customer electricity data for two predictive tasks:
+### 1. Clone the Repository
 
-- Regression: predict annual electricity consumption from customer profile and tariff features.
-- Classification: predict tariff category from customer profile and consumption features.
+```bash
+git clone <repository-url>
+cd big_data_portfolio
+```
 
-The notebook evaluates Linear Regression, Decision Tree, and Random Forest models. Saved outputs show the Random Forest classifier reaching about 79% accuracy before cross-validation tuning.
+### 2. Create a Virtual Environment
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+On Windows:
+
+```bash
+.venv\Scripts\activate
+```
+
+### 3. Install Dependencies
+
+```bash
+pip install jupyter pandas matplotlib requests pymongo nltk scikit-learn
+```
+
+Download the NLTK resources used by the text mining notebook:
+
+```bash
+python -m nltk.downloader vader_lexicon stopwords punkt
+```
+
+### 4. Start Jupyter
+
+```bash
+jupyter notebook
+```
+
+Then open the notebook you want to review or run.
+
+## Data and Credential Requirements
+
+Some notebooks require external data sources or credentials that are not included in this repository.
+
+| Notebook | Requirement |
+| --- | --- |
+| `api_data_mining.ipynb` | New York Times Article Search API key. Replace the placeholder API key before running. |
+| `NoSQL_data_mining.ipynb` | Access to the MongoDB server, database, and `movies` collection referenced in the notebook. |
+| `text_mining_ml.ipynb` | Yelp review CSV with `class` and `review` columns. Update the local CSV path before running on a new machine. |
+
+For public sharing, keep API keys, database credentials, and local file paths out of committed notebook outputs.
 
 ## Suggested Review Order
 
-1. Start with `api_data_mining.ipynb` for a compact API collection and visualization example.
-2. Review `NoSQL_data_mining.ipynb` to see database querying and aggregation logic.
-3. Open `text_mining_ml.ipynb` for natural language processing and classification.
-4. Finish with `predicting_tariff.ipynb` for the most complete supervised machine learning workflow.
+1. Start with [`api_data_mining.ipynb`](api_data_mining.ipynb) for a compact API collection and visualization example.
+2. Review [`NoSQL_data_mining.ipynb`](NoSQL_data_mining.ipynb) for database querying and aggregation logic.
+3. Finish with [`text_mining_ml.ipynb`](text_mining_ml.ipynb) for the most complete machine learning workflow.
 
-## Notes
+## Notes for Reproducibility
 
-- The notebooks are intended as portfolio examples and may require path, credential, or connection updates before rerunning.
-- API and database notebooks depend on live external services, so results may vary if data sources change.
-- For reproducible public sharing, consider adding sample datasets, a `requirements.txt`, and scrubbed environment variable examples for credentials.
+- The notebooks are portfolio examples and may require path, credential, or connection updates before running end to end.
+- API results can change over time as source systems update their data.
+- Database-backed results depend on the MongoDB collection available in the target environment.
+- To make the repository fully reproducible, consider adding sample data, a `requirements.txt`, and an `.env.example` file for credential setup.
