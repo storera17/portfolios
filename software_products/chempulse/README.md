@@ -1,5 +1,13 @@
 # ChemPulse
 
+## Future Preview Workflow Tease 
+
+<img width="1774" height="887" alt="image" src="https://github.com/user-attachments/assets/b938afcb-5bf8-4fd7-b09e-be44a4796942" />
+
+*image generated above is from Codex. All rights reserved (R)*
+
+## Current ChemPulse Description 
+
 ![ChemPulse mobile companion screenshot](assets/chempulse-mobile-dashboard.png)
 
 ChemPulse is a local-first chemical intelligence product split into a Reflex frontend, a Python backend, and optional desktop/mobile access. It is organized around the application layers needed to run, test, bundle, and ship the product.
