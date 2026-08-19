@@ -2,7 +2,7 @@
 
 ## Future Preview Workflow Tease 
 
-<img width="1774" height="887" alt="image" src="https://github.com/user-attachments/assets/b938afcb-5bf8-4fd7-b09e-be44a4796942" />
+<img width="1693" height="929" alt="image" src="https://github.com/user-attachments/assets/93a7764f-9591-45d6-a227-c9482b2a902e" />
 
 *image generated above is from Codex. All rights reserved (R)*
 
