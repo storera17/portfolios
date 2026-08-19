@@ -1,6 +1,6 @@
 # MomentumProdigy
 
-![MomentumProdigy local profile screen](assets/momentum-prodigy-entry.png)
+<img width="2638" height="1596" alt="image" src="https://github.com/user-attachments/assets/ca54ca6f-069f-494b-bccc-9fd5f9b95d70" />
 
 MomentumProdigy is an offline-first mastery-learning platform for turning
 structured course material into guided lessons, adaptive review, searchable
